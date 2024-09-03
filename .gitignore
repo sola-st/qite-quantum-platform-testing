@@ -1,0 +1,16 @@
+
+# secrets
+groq_token.txt
+
+# data folders
+deprecated_apis/*
+available_apis/*
+platform_repos/*
+program_bank/*
+
+# logs
+log.txt
+
+.vscode/*
+
+**.pyc

@@ -1,0 +1,27 @@
+Given the following code context and the JSON schema, identify the deprecated and replacement entities.
+
+## File path
+{{FILE_PATH}}
+
+
+## Target line of code:
+```python
+{{TARGET_LINE}}
+```
+
+## Context:
+```python
+{{CONTEXT_COMPRESSED}}
+```
+
+## JSON Schema for the response
+{{JSON_SCHEMA}}
+
+## Guidelines for Your Response:
+- **Format**: The output must strictly follow the JSON schema provided.
+- **Version Fields**: Use semantic versioning (e.g., "1.3.0"). If a version is not specified, use "None". Only digits and dots are allowed in version fields.
+- **Target Deprecation**: Focus solely on the deprecation indicated in the target line of code.
+- **Entity Names**: The `deprecated_entity` and `replacement_entity` fields should be dot-separated paths without any whitespace.
+- **Annotations**: If a Python annotation marks a method, function, or class as deprecated (e.g., @deprecate_func), consider the annotated method, function, or class as the deprecated entity.
+- **Not replaced APIs**: If the deprecated entity is not replaced by any other entity, set the `replacement_entity`, `replacement_entity_type`, `replacement_fully_qualified_name` fields as "None".
+- **Constructor**: If the deprecated entity is a class constructor (`__init__`), stop at the class name in the entity fields and put class in the entity type field.

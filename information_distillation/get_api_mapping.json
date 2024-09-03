@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "properties": {
+    "deprecated_entity": {
+      "type": "string"
+    },
+    "deprecated_entity_type": {
+      "type": "string",
+      "enum": ["method", "function", "parameter", "class"]
+    },
+    "deprecated_fully_qualified_name": {
+      "type": "string"
+    },
+    "replacement_entity": {
+      "type": "string"
+    },
+    "replacement_entity_type": {
+      "type": "string",
+      "enum": ["method", "function", "parameter", "class"]
+    },
+    "replacement_fully_qualified_name": {
+      "type": "string"
+    },
+    "line_with_deprecate": {
+      "type": "string"
+    },
+    "deprecated_since_version": {
+      "type": "string"
+    },
+    "removed_in_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "deprecated_entity",
+    "deprecated_entity_type",
+    "deprecated_fully_qualified_name",
+    "replacement_entity",
+    "replacement_entity_type",
+    "replacement_fully_qualified_name",
+    "line_with_deprecate",
+    "deprecated_since_version",
+    "removed_in_version"
+  ]
+}

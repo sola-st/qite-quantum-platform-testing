@@ -1,0 +1,18 @@
+# Use the slim Python 3.10 image
+FROM python:3.10-slim
+
+# Set environment variable to avoid issues with pip and locales
+ENV PYTHONUNBUFFERED=1
+ENV LANG=C.UTF-8
+
+# Install Qiskit version 1.2.0
+RUN pip install --no-cache-dir qiskit==1.2.0
+
+# Create and set the working directory
+WORKDIR /workspace
+
+# Copy the Python script into the container
+COPY to_execute.py /workspace/
+
+# Set the default command to run the Python script
+CMD ["python", "to_execute.py"]
