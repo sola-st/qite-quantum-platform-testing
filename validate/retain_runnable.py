@@ -75,7 +75,8 @@ def run_file_in_docker(file_path: Path, image_name: str) -> bool:
             container.remove()
 
             # Print logs in yellow
-            console.log(f"[yellow]Output of {file_path.name}:[/yellow]\n{logs}")
+            console.log(
+                f"[yellow]Output of {file_path.name}:[/yellow]\n{logs}")
 
             return exit_code == 0
 
@@ -105,12 +106,14 @@ def process_files(
 @click.command()
 @click.option('--input_folder', type=str, required=True,
               help='Folder with the Python files to execute.')
-@click.option('--output_folder', type=str, required=True,
+@click.option('--output_folder', type=str,
               help='Folder to store successfully executed Python files.')
-@click.option('--image_name', type=str, default='qiskit_runner_legacy',
+@click.option('--image_name', type=str, default='qiskit_runner',
               help='Docker image to use for execution.')
 def main(input_folder: str, output_folder: str, image_name: str) -> None:
     """Main function to execute Python files in Docker containers."""
+    if not output_folder:
+        output_folder = input_folder + '_runnable'
     process_files(
         input_folder=input_folder, output_folder=output_folder,
         image_name=image_name)

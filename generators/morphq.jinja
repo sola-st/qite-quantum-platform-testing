@@ -1,0 +1,33 @@
+# Section: Prologue
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit_aer import AerSimulator
+from qiskit_ibm_runtime import Session, Sampler
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+
+# Section: Circuit
+qr = QuantumRegister({{N_QUBITS}}, name='qr')
+cr = ClassicalRegister({{N_QUBITS}}, name='cr')
+qc = QuantumCircuit(qr, cr, name='qc')
+
+# Apply gate operations
+{{GATE_OPS}}
+
+# Section: Measurement
+qc.measure(qr, cr)
+
+# Section: Execution
+# Run the sampler job locally using AerSimulator.
+# Session syntax is supported but ignored.
+aer_sim = AerSimulator()
+
+# Transpile
+pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)
+isa_qc = pm.run(qc)
+
+# The session is used but ignored in AerSimulator.
+sampler = Sampler(mode=aer_sim)
+result = sampler.run([isa_qc]).result()[0]
+
+# Section: Results
+counts = result.data.cr.get_counts()
+print(f"Measurement results: {counts}")

@@ -29,6 +29,9 @@ python validate/extract_valid_circuit_programs.py --input_folder program_bank/20
 ```shell
 cd docker
 docker build -t qiskit_runner .
+# to have the correct permissions to write files in the docker and
+# to be able to read them in the host machine
+docker build --build-arg UID=$(id -u paltenmo) --build-arg GID=$(id -g paltenmo) -t qiskit_runner .
 ```
 
 - Create the docker image to run the unsafe generated programs:
