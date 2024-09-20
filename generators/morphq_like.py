@@ -92,7 +92,7 @@ console = Console()
 
 def generate_output_folder(base_folder: Path, platform: str) -> Path:
     """Generates an output folder path with the current date and time."""
-    timestamp = datetime.now().strftime('%Y_%m_%d__%H:%M')
+    timestamp = datetime.now().strftime('%Y_%m_%d__%H_%M')
     output_path = base_folder / f"{timestamp}__{platform}"
     output_path.mkdir(parents=True, exist_ok=True)
     return output_path

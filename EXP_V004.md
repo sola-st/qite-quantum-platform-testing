@@ -10,16 +10,24 @@ python validate/retain_runnable.py --input_folder program_bank/2024_09_19__17:40
 
 Run them by adding the extraction of QASM code.
 ```shell
-python validate/extract_qasm.py --input_folder program_bank/2024_09_19__21:19__qiskit --image_name qiskit_runner
+python validate/extract_qasm.py --input_folder program_bank/2024_09_19__21_19__qiskit --image_name qiskit_runner
 ```
 
 Compare all the pairs of QASM files with the same prefix but different suffixes.
 `_pytket.qasm` and `_qiskit.qasm` files.
 
 ```shell
-python validate/compare_qasm.py --input_folder program_bank/2024_09_19__21:19__qiskit
+python validate/compare_qasm.py --input_folder program_bank/2024_09_19__21_19__qiskit
 ```
 
+Check if the QASM files are pasrsable by Qiskit.
+```shell
+python validate/parse_qasm2.py --input_folder program_bank/2024_09_19__21_19__qiskit/ --image_name qiskit_runner --platform_name qiskit
+# you can use also pytket
+python validate/parse_qasm2.py --input_folder program_bank/2024_09_19__21_19__qiskit/ --image_name qiskit_runner --platform_name pytket
+# you can use also pennylane
+python validate/parse_qasm2.py --input_folder program_bank/2024_09_19__21_19__qiskit/ --image_name qiskit_runner --platform_name pennylane
+```
 
 
 

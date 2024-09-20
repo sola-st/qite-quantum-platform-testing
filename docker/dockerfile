@@ -15,6 +15,7 @@ ENV LANG=C.UTF-8
 RUN pip install --no-cache-dir qiskit==1.2.1
 RUN pip install qiskit-aer==0.15.1 qiskit-ibm-runtime==0.29.1
 RUN pip install pytket==1.32.0 pytket-qiskit==0.56.0
+RUN pip install PennyLane==0.38.0 PennyLane-qiskit==0.38.0
 
 # Create and set the working directory
 WORKDIR /workspace
