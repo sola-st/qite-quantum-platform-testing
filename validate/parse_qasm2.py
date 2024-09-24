@@ -60,7 +60,7 @@ Convert the function above into a click v8 interface in Python.
 
 import json
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import click
 import docker
 from rich.console import Console
@@ -89,6 +89,22 @@ def _get_sorted_qasm_files(input_folder: Path) -> List[Path]:
     return qasm_files
 
 
+def get_circuit_and_var_name(file_name_no_ext: str) -> Tuple[str, str]:
+    """Get the circuit name and variable name from the file name."""
+    # remove platform name from the file name
+    # namely the last _qiskit.qasm, _pytket.qasm, _pennylane.qasm
+    for suffix in ["_qiskit", "_pytket", "_pennylane"]:
+        if file_name_no_ext.endswith(suffix):
+            file_name_no_ext = file_name_no_ext.replace(suffix, "")
+    if file_name_no_ext.endswith("_isa_qc"):
+        circ_name = file_name_no_ext.replace("_isa_qc", "")
+        var_name = "isa_qc"
+    elif file_name_no_ext.endswith("_qc"):
+        circ_name = file_name_no_ext.replace("_qc", "")
+        var_name = "qc"
+    return circ_name, var_name
+
+
 def _process_files(qasm_files: List[Path],
                    image_name: str, input_folder: Path, platform_name: str) -> Tuple[List[str],
                                                                                      List[Dict[str, str]]]:
@@ -105,6 +121,22 @@ def _process_files(qasm_files: List[Path],
             failure_files.append(
                 {"file": str(qasm_file.name),
                  "error": message})
+            base_name = qasm_file.name.replace(".qasm", "")
+            parsing_error_path = input_folder / \
+                f"{base_name}_parsing_error.json"
+            file_name, var_qc = get_circuit_and_var_name(
+                file_name_no_ext=base_name)
+            file_content = qasm_file.read_text()
+            with parsing_error_path.open("w") as f:
+                json.dump({
+                    "file_name": file_name,
+                    "var_qc": var_qc,
+                    "error": message,
+                    "platform": platform_name,
+                    "file_content": file_content,
+                    "testing_phase": "qasm_parsing"
+                }, f, indent=4)
+
     return success_files, failure_files
 
 
@@ -118,7 +150,7 @@ def _run_docker_container(
     elif platform_name == "pennylane":
         command = _compose_docker_command_pennylane(qasm_file=qasm_file)
     console.print(
-        f"Parsing file {qasm_file.name} in Docker image {image_name}")
+        f"Parsing {qasm_file.name} [docker image={image_name}] [platform={platform_name}]")
     return _execute_in_docker(
         image_name=image_name, command=command, input_folder=input_folder)
 
@@ -189,13 +221,16 @@ def _save_results_to_json(
               required=True, help="The name of the Docker image.")
 @click.option('--platform_name', type=click.Choice(
     ['qiskit', 'pytket', 'pennylane']),
-    default='qiskit', show_default=True, required=True,
-    help="The name of the platform.")
-def main(input_folder: Path, image_name: str, platform_name: str) -> None:
+    default=None, show_default=True, required=False,
+    help="The name of the platform. If not provided, all platforms will be used.")
+def main(input_folder: Path, image_name: str, platform_name: Optional[str]) -> None:
     """Main command to parse all QASM files using Qiskit in Docker."""
-    validate_qasm_files(
-        input_folder=input_folder, image_name=image_name,
-        platform_name=platform_name)
+    platforms = ['qiskit', 'pytket',
+                 'pennylane'] if platform_name is None else [platform_name]
+    for platform in platforms:
+        validate_qasm_files(
+            input_folder=input_folder, image_name=image_name,
+            platform_name=platform)
 
 
 if __name__ == '__main__':

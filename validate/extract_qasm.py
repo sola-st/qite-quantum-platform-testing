@@ -56,6 +56,7 @@ import os
 import shutil
 import tempfile
 import docker
+import json
 
 console = Console()
 
@@ -73,6 +74,16 @@ def append_qasm_extraction_snippet(file: Path) -> str:
 
 # Initialize rich console for logging
 console = Console()
+
+
+def rewrite_filename(json_file: Path, new_name: str) -> None:
+    """Rewrite the filename key of each record in the JSON file."""
+    with json_file.open() as f:
+        data = json.load(f)
+    new_data = [
+        {**record, "file_name": new_name} for record in data]
+    with json_file.open("w") as f:
+        json.dump(new_data, f, indent=4)
 
 
 def run_file_in_docker(file_path: Path, image_name: str) -> bool:
@@ -106,6 +117,9 @@ def run_file_in_docker(file_path: Path, image_name: str) -> bool:
                 # replace to_execute with the original file name
                 new_name = item.name.replace("to_execute.py", file_path.stem)
                 shutil.copy(item, file_path.parent / new_name)
+                if item.name.endswith(".json"):
+                    rewrite_filename(
+                        file_path.parent / new_name, file_path.stem)
 
             # Collect and log the output from the container
             logs = container.logs(stdout=True, stderr=True).decode()

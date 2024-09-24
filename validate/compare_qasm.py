@@ -54,9 +54,13 @@ Convert the function above into a click v8 interface in Python.
 
 import click
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any, Optional
 from rich.console import Console
 from mqt import qcec
+from itertools import combinations
+import traceback
+import json
+import re
 
 console = Console()
 
@@ -67,41 +71,110 @@ def get_qasm_files(input_folder: Path) -> List[Path]:
     return qasm_files
 
 
-def pair_qasm_files(qasm_files: List[Path]) -> List[Tuple[Path, Path]]:
-    """Pairs QASM files by matching the common prefix before _pytket and _qiskit."""
-    pairs = []
-    for qiskit_file in qasm_files:
-        if "_qiskit.qasm" in qiskit_file.name:
-            prefix = qiskit_file.stem.replace("_qiskit", "")
-            pytket_file = qiskit_file.with_name(f"{prefix}_pytket.qasm")
-            if pytket_file.exists():
-                pairs.append((pytket_file, qiskit_file))
-    return pairs
+def group_qasm_files(qasm_files: List[Path]) -> Dict[str, List[Path]]:
+    """Group QASM files by prefixes.
+
+    A file might end with _qiskit.qasm or _pytket.qasm or _pennylane.qasm.
+    There might be one or more files with the same prefix.
+    The routine
+    """
+    prefixes = set()
+    for qasm_file in qasm_files:
+        for suffix in ["_qiskit.qasm", "_pytket.qasm", "_pennylane.qasm"]:
+            if suffix in qasm_file.name:
+                prefix = qasm_file.name.replace(suffix, "")
+                prefixes.add(prefix)
+    groups = {}
+    for prefix in prefixes:
+        group = [
+            qasm_file for qasm_file in qasm_files
+            if qasm_file.stem.startswith(prefix)]
+        groups[prefix] = group
+    return groups
 
 
-def compare_circuits(pair: Tuple[Path, Path]) -> None:
-    """Compares two QASM files using QCEC and logs the result."""
-    pytket_file, qiskit_file = pair
-    result = qcec.verify(str(pytket_file), str(qiskit_file))
-    equivalence = str(result.equivalence)
-    if equivalence == 'equivalent':
-        console.log(f"[green]The circuits {pytket_file.name} "
-                    f"and {qiskit_file.name} are equivalent.")
+def get_common_prefix_and_circ_name(file_a: Path, file_b: Path) -> Tuple[str, str]:
+    """Returns the common prefix of two QASM files.
+
+    Scan the filenames from the start until the first difference is found.
+    """
+    prefix = ""
+    for a, b in zip(file_a.stem, file_b.stem):
+        if a == b:
+            prefix += a
+        else:
+            break
+    if prefix.endswith("isa_qc"):
+        file_name = prefix.replace("isa_qc", "")
+        var_qc = "isa_qc"
     else:
-        console.log(f"[red]The circuits {pytket_file.name} "
-                    f"and {qiskit_file.name} are not equivalent.")
+        file_name = prefix.replace("_qc", "")
+        var_qc = "qc"
+    return file_name, var_qc
+
+
+def compare_circuits(pair: Tuple[Path, Path]) -> Optional[Dict[str, str]]:
+    """Compares two QASM files using QCEC and logs the result."""
+    a_file, b_file = pair
+    error_msg = None
+    stack_trace = None
+    try:
+        result = qcec.verify(str(a_file), str(b_file))
+        equivalence = str(result.equivalence)
+        if equivalence == 'equivalent':
+            console.log(f"[green]The circuits are equivalent:\n- {a_file.name}"
+                        f"\n- {b_file.name}")
+            return None
+        else:
+            console.log(
+                f"[red]The circuits are not equivalent:\n- {a_file.name}"
+                f"\n- {b_file.name}")
+            error_msg = f"The circuits are not equivalent"
+    except Exception as e:
+        console.log(f"[red]Error comparing the circuits: {e}[/red]")
+        error_msg = f"Error comparing the circuits: {e}"
+        stack_trace = traceback.format_exc()
+    platform_a = a_file.name.split("_")[-1].replace(".qasm", "")
+    platform_b = b_file.name.split("_")[-1].replace(".qasm", "")
+    file_name, var_qc = get_common_prefix_and_circ_name(
+        file_a=a_file, file_b=b_file)
+    return {
+        "error": error_msg,
+        "file_a": a_file.name,
+        "file_b": b_file.name,
+        "file_name": file_name,
+        "var_qc": var_qc,
+        "file_a_content": a_file.read_text(),
+        "file_b_content": b_file.read_text(),
+        "stack_trace": stack_trace,
+        "testing_phase": "qasm_comparison",
+        "platform_a": platform_a,
+        "platform_b": platform_b,
+    }
 
 
 def process_qasm_files(input_folder: Path) -> None:
     """Processes the QASM files in pairs and compares them."""
     qasm_files = get_qasm_files(input_folder=input_folder)
-    qasm_pairs = pair_qasm_files(qasm_files=qasm_files)
+    qasm_group = group_qasm_files(qasm_files=qasm_files)
 
-    for pair in qasm_pairs:
-        console.log("Comparing circuits:")
-        console.log(f"  {pair[0].name}")
-        console.log(f"  {pair[1].name}")
-        compare_circuits(pair=pair)
+    for group_key, group in qasm_group.items():
+        console.log("Circuits in group:")
+        errors = []
+        for el in group:
+            console.log(f"  {el.name}")
+        for pair in combinations(group, 2):
+            console.log(f"Comparing...")
+            console.log(f"A.  {pair[0].name}")
+            console.log(f"B.  {pair[1].name}")
+
+            error = compare_circuits(pair=pair)
+            if error:
+                errors.append(error)
+            file_path_output = input_folder / \
+                f"{group_key}_comparison_errors.json"
+            with open(file_path_output, "w") as f:
+                json.dump(errors, f, indent=4)
 
 
 @click.command()
