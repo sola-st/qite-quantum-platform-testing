@@ -93,6 +93,8 @@ import validate.functions_qasm_export as export_functions
 import validate.functions_qasm_import as import_functions
 import validate.functions_qasm_compare as compare_functions
 
+from generators.docker_tooling import run_program_in_docker
+
 console = Console()
 
 
@@ -197,40 +199,10 @@ def main(
             file_name=f"qiskit_circuit_{max_n_qubits}q_{max_n_gates}g_{i+1}_{uuid_str}.py"
         )
 
-        def _execute_in_docker(
-                image_name: str, command: str, input_folder: Path) -> Tuple[bool, str]:
-            """Execute the command inside the Docker container and handle parsing."""
-            client = docker.from_env()
-            abs_folder = input_folder.resolve()
-            try:
-                output = client.containers.run(
-                    image=image_name,
-                    command=command,
-                    volumes={str(abs_folder): {'bind': '/workspace', 'mode': 'rw'}},
-                    working_dir='/workspace'
-                )
-                console.print(f"Output: {output.decode()}")
-                return True, output.decode()
-            except docker.errors.ContainerError as e:
-                console.print(f"Error parsing: {e}", style="bold red")
-                return False, str(e)
-
-        def run_program_in_docker(output_path: Path, file_name: str) -> None:
-            """Runs the generated Qiskit program in a Docker container."""
-            docker_command = f"python /workspace/{file_name}"
-            success, output = _execute_in_docker(
-                image_name='qiskit_runner',
-                command=docker_command,
-                input_folder=output_path
-            )
-            if success:
-                console.log(f"Program {file_name} executed successfully.")
-            else:
-                console.log(f"Failed to execute {file_name} in Docker.")
-
         # Run the generated program in Docker
         file_name = f"qiskit_circuit_{max_n_qubits}q_{max_n_gates}g_{i+1}_{uuid_str}.py"
-        run_program_in_docker(output_path=output_path, file_name=file_name)
+        run_program_in_docker(folder_with_file=output_path,
+                              file_name=file_name, console=console)
 
     console.log("Qiskit program generation completed.")
 
