@@ -1,12 +1,12 @@
-"""Compare all the qasm files in the folder with QCEC.
+"""Compare all the QASM files in a folder using QCEC.
 
-The script scans the folder content, keeps only the qasm files, sorts them, and
-then compares the circuits in pairs. it first creates all the pairs of circuits
-each pair contain the two files ending with _pytket.qasm and _qiskit.qasm and
-the same prefix before.
-Each pair is the compared with QCEC and the result is printed.
+This script scans a folder, filters out the QASM files, and groups them based
+on prefixes. For each group, pairs of QASM files with different quantum
+compilation platforms (e.g., _qiskit.qasm, _pytket.qasm, _pennylane.qasm)
+are compared for equivalence using the QCEC library. The results of the
+comparisons are logged, and errors are saved to a JSON file.
 
-An example of how to use the QCEC library to compare two qasm files.
+Example usage of QCEC library:
 ```python
 import os
 from mqt import qcec
@@ -66,17 +66,16 @@ console = Console()
 
 
 def get_qasm_files(input_folder: Path) -> List[Path]:
-    """Returns all QASM files in the input folder, sorted by filename."""
+    """Retrieves all QASM files from the specified input folder, sorting them by filename."""
     qasm_files = sorted(input_folder.glob("*.qasm"))
     return qasm_files
 
 
 def group_qasm_files(qasm_files: List[Path]) -> Dict[str, List[Path]]:
-    """Group QASM files by prefixes.
+    """Groups QASM files by their prefixes (before the platform-specific suffix).
 
-    A file might end with _qiskit.qasm or _pytket.qasm or _pennylane.qasm.
+    A file might end with _qiskit.qasm, _pytket.qasm, or _pennylane.qasm.
     There might be one or more files with the same prefix.
-    The routine
     """
     prefixes = set()
     for qasm_file in qasm_files:
@@ -94,7 +93,7 @@ def group_qasm_files(qasm_files: List[Path]) -> Dict[str, List[Path]]:
 
 
 def get_common_prefix_and_circ_name(file_a: Path, file_b: Path) -> Tuple[str, str]:
-    """Returns the common prefix of two QASM files.
+    """Finds the common prefix between two QASM file names and determines the circuit type (ISA or QC).
 
     Scan the filenames from the start until the first difference is found.
     """
@@ -114,7 +113,7 @@ def get_common_prefix_and_circ_name(file_a: Path, file_b: Path) -> Tuple[str, st
 
 
 def compare_circuits(pair: Tuple[Path, Path]) -> Optional[Dict[str, str]]:
-    """Compares two QASM files using QCEC and logs the result."""
+    """Compares two QASM circuits using the QCEC library. Logs the result and returns an error message if they are not equivalent."""
     a_file, b_file = pair
     error_msg = None
     stack_trace = None
@@ -154,7 +153,7 @@ def compare_circuits(pair: Tuple[Path, Path]) -> Optional[Dict[str, str]]:
 
 
 def process_qasm_files(input_folder: Path) -> None:
-    """Processes the QASM files in pairs and compares them."""
+    """Processes all QASM files in a folder, groups them, and compares each pair. Outputs errors to a JSON file."""
     qasm_files = get_qasm_files(input_folder=input_folder)
     qasm_group = group_qasm_files(qasm_files=qasm_files)
 
@@ -182,7 +181,7 @@ def process_qasm_files(input_folder: Path) -> None:
     exists=True, file_okay=False),
     help="Folder containing the QASM files to compare.")
 def main(input_folder: str) -> None:
-    """Main function to scan, pair, and compare QASM files in the given folder."""
+    """CLI entry point for providing the input folder containing QASM files for comparison."""
     input_folder_path = Path(input_folder)
     process_qasm_files(input_folder=input_folder_path)
 
