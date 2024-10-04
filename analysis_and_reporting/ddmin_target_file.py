@@ -160,7 +160,8 @@ def save_minimized_file(minimized_content: List[str],
     """Save the minimized content to a new Python file."""
     with open(output_path, 'w') as f:
         f.write('"""This is the content of the error message:\n')
-        f.write(dump_json_with_max_length(error_info))
+        # f.write(dump_json_with_max_length(error_info))
+        f.write(json.dumps(error_info, indent=4))
         f.write('\n"""\n')
         if header:
             f.write(header)

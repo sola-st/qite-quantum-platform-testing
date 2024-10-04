@@ -77,4 +77,6 @@ Pennylane wrong qubit order
 python -m analysis_and_reporting.ddmin_target_file --input_folder program_bank/2024_09_25__15_51__qiskit --path_to_error program_bank/2024_09_25__15_51__qiskit/qiskit_circuit_5q_10g_3_403546_10a80c_error.json --clue_message "Gate has an invalid number of parameters"
 # Run and Get Two QASM Files
 docker run --rm -v "$(pwd)/program_bank/2024_09_25__15_51__qiskit:/workspace" -w /workspace qiskit_runner python qiskit_circuit_5q_10g_3_403546_10a80c_error_min.py
+# Root Cause - TO REPORT
+Qiskit exports iswap with two arguments, but Pytket expects more when importing
 ```
