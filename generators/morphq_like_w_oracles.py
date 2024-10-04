@@ -146,9 +146,11 @@ def save_program_to_file(
               help="Maximum number of gates in the circuit.")
 @click.option('--max_n_programs', default=10, type=int, required=True,
               help="Maximum number of programs to generate.")
+@click.option('--perform_execution', is_flag=True, default=False,
+              help="Flag to indicate whether to perform execution.")
 def main(
         output_folder: str, prompt: Path, max_n_qubits: int, max_n_gates: int,
-        max_n_programs: int):
+        max_n_programs: int, perform_execution: bool):
     """
     CLI to generate Qiskit programs based on a MorphQ template and save them to files.
     """
@@ -189,6 +191,7 @@ def main(
             FUNCTION_IMPORT_FROM_QASM=import_functions_section,
             FUNCTIONS_COMPARE=compare_functions_section,
             TARGET_QC='qc',
+            PERFORM_EXECUTION=perform_execution
         )
 
         # Save the generated program to a file

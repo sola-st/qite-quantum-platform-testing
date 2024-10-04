@@ -17,6 +17,7 @@ qc = QuantumCircuit(qr, cr, name='qc')
 # Section: Measurement
 qc.measure(qr, cr)
 
+{% if PERFORM_EXECUTION %}
 # Section: Execution
 # Run the sampler job locally using AerSimulator.
 # Session syntax is supported but ignored.
@@ -33,6 +34,7 @@ result = sampler.run([isa_qc]).result()[0]
 # Section: Results
 counts = result.data.cr.get_counts()
 print(f"Measurement results: {counts}")
+{% endif %}
 
 
 # Helper Functions

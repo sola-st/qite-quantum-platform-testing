@@ -1,0 +1,9 @@
+commands:
+  - module: generators.morphq_like_w_oracles
+    arguments:
+      prompt: generators/morphq_w_oracles.jinja
+      output_folder: program_bank/v001/
+      max_n_qubits: 30
+      max_n_gates: 10
+      max_n_programs: 10000
+      perform_execution: False

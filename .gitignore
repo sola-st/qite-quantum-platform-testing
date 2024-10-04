@@ -10,6 +10,7 @@ program_bank/*
 
 # logs
 log.txt
+*.log
 
 .vscode/*
 
