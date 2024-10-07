@@ -2,6 +2,7 @@
 import docker
 from pathlib import Path
 from typing import Tuple
+import subprocess
 
 
 def _execute_in_docker(
@@ -50,3 +51,22 @@ def run_program_in_docker(
             console.log(f"Failed to execute {file_name} in Docker.")
         else:
             print(f"Failed to execute {file_name} in Docker.")
+
+
+def run_program_in_docker_w_timeout(
+        folder_with_file: Path, file_name: str, timeout: int = 60, console=None) -> None:
+    """Runs the generated program in a Docker container with a timeout."""
+    if isinstance(folder_with_file, str):
+        folder_with_file = Path(folder_with_file)
+    try:
+        result = subprocess.run(
+            ["docker", "run", "--rm", "-v",
+             f"{folder_with_file.resolve()}:/workspace", "qiskit_runner",
+             "python", f"/workspace/{file_name}"],
+            capture_output=True, text=True, timeout=timeout)
+        success = result.returncode == 0
+        if not success:
+            raise subprocess.CalledProcessError(
+                result.returncode, result.args, result.stdout, result.stderr)
+    except subprocess.TimeoutExpired:
+        raise TimeoutError(f"Timeout of {timeout} seconds expired.")
