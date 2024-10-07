@@ -3,7 +3,8 @@ def import_from_qasm_with_qiskit(file_path: str):
     from qiskit import qasm2
     with open(file_path, 'r') as f:
         qasm_content = f.read()
-    circuit = qasm2.loads(qasm_content)
+    circuit = qasm2.loads(
+        qasm_content, custom_instructions=qasm2.LEGACY_CUSTOM_INSTRUCTIONS)
     print(f"Circuit (Qiskit) imported correctly: {file_path}")
     return circuit
 
