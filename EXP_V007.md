@@ -56,3 +56,27 @@ docker run --rm -v "$(pwd)/program_bank/v001/2024_10_04__14_48__qiskit:/workspac
 # interactive run
 docker run --rm -it -v "$(pwd)/program_bank/v001/2024_10_04__14_48__qiskit:/workspace" -w /workspace qiskit_runner python qiskit_circuit_30q_10g_91_41ba22_a542f6_error_min.py
 ```
+
+
+## Run Number v002
+
+
+## SX Gate: Pytket vs Qiskit
+
+Minimized File: `program_bank/v002/2024_10_07__17_03__qiskit/qiskit_circuit_30q_10g_1257_47ef88_4ff963_error_min.py`
+
+Rerun:
+```shell
+docker run --rm -v "$(pwd)/program_bank/v002/2024_10_07__17_03__qiskit:/workspace" -w /workspace qiskit_runner python qiskit_circuit_30q_10g_1257_47ef88_4ff963_error_min.py
+```
+
+After inspection they are equivalent up to a global phase and the difference is due to the `qc.decompose()` in Qiskit which makes stronger assumptions.
+
+## MS Gate: PennyLane vs Qiskit: Cannot import second circuit
+
+Minimized File: `program_bank/v002/2024_10_07__17_03__qiskit/qiskit_circuit_30q_10g_257_564c6c_9a9f86_error_min.py`
+
+Rerun:
+```shell
+docker run --rm -v "$(pwd)/program_bank/v002/2024_10_07__17_03__qiskit:/workspace" -w /workspace qiskit_runner python qiskit_circuit_30q_10g_257_564c6c_9a9f86_error_min.py
+```
