@@ -14,7 +14,7 @@ def import_from_qasm_with_pytket(file_path: str):
     from pytket.qasm import circuit_from_qasm_str
     with open(file_path, 'r') as f:
         qasm_content = f.read()
-    circuit = circuit_from_qasm_str(qasm_content)
+    circuit = circuit_from_qasm_str(qasm_content, maxwidth=200)
     print(f"Circuit (Pytket) imported correctly: {file_path}")
     return circuit
 

@@ -1,0 +1,16 @@
+# v003: simple re-run of v002
+# but with the following differences:
+# - more programs: 100k instead of 10k
+# - more gates: 100 instead of 10
+# - more qubits: 100 instead of 30
+
+
+commands:
+  - module: generators.morphq_like_w_oracles
+    arguments:
+      prompt: generators/morphq_w_oracles.jinja
+      output_folder: program_bank/v003/
+      max_n_qubits: 32
+      max_n_gates: 10
+      max_n_programs: 100000
+      perform_execution: False

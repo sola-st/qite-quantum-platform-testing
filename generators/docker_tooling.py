@@ -66,7 +66,14 @@ def run_program_in_docker_w_timeout(
             capture_output=True, text=True, timeout=timeout)
         success = result.returncode == 0
         if not success:
-            raise subprocess.CalledProcessError(
+            exception_info = subprocess.CalledProcessError(
                 result.returncode, result.args, result.stdout, result.stderr)
+            if console:
+                console.log(f"Error: {exception_info}")
+            else:
+                print(f"Error: {exception_info}")
     except subprocess.TimeoutExpired:
-        raise TimeoutError(f"Timeout of {timeout} seconds expired.")
+        if console:
+            console.log(f"Execution timed out after {timeout} seconds.")
+        else:
+            print(f"Execution timed out after {timeout} seconds.")

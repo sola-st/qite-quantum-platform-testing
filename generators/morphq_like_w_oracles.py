@@ -93,7 +93,10 @@ import validate.functions_qasm_export as export_functions
 import validate.functions_qasm_import as import_functions
 import validate.functions_qasm_compare as compare_functions
 
-from generators.docker_tooling import run_program_in_docker
+from generators.docker_tooling import (
+    run_program_in_docker,
+    run_program_in_docker_w_timeout
+)
 
 console = Console()
 
@@ -204,8 +207,8 @@ def main(
 
         # Run the generated program in Docker
         file_name = f"qiskit_circuit_{max_n_qubits}q_{max_n_gates}g_{i+1}_{uuid_str}.py"
-        run_program_in_docker(folder_with_file=output_path,
-                              file_name=file_name, console=console)
+        run_program_in_docker_w_timeout(folder_with_file=output_path,
+                                        file_name=file_name, console=console)
 
     console.log("Qiskit program generation completed.")
 

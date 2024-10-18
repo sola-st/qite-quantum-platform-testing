@@ -1,12 +1,14 @@
 
 # secrets
 groq_token.txt
+openai_token.txt
 
 # data folders
 deprecated_apis/*
 available_apis/*
 platform_repos/*
 program_bank/*
+data/*
 
 # logs
 log.txt

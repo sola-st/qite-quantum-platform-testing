@@ -12,7 +12,8 @@ def export_to_qasm_with_pytket(
 
     # Convert Qiskit circuit to Pytket format and save as QASM
     tket_circ = qiskit_to_tk(qiskit_circ.decompose().decompose())
-    qasm_str_tket = circuit_to_qasm_str(tket_circ, header="qelib1")
+    qasm_str_tket = circuit_to_qasm_str(
+        tket_circ, header="qelib1", maxwidth=200)
 
     # Determine file path
     current_file = Path(__file__)
