@@ -1,0 +1,4 @@
+PATH_ROOT_DIR: ./
+DIR_PROGRAM_BANK: program_bank/v003/2024_10_18__10_19__qiskit
+INFO_TO_USE_FOR_CLUSTERING:
+  - essential_file_content
