@@ -1,0 +1,8 @@
+{
+    "exception_message": "Cannot print command of type: PhasedX(0.804597, 0.5)",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/qiskit_circuit_32q_10g_34085_28e917_5ead57_error_min.py\", line 101, in <module>\n    qasm_file = export_call(qiskit_circ=target_qc, var_name='qc')\n  File \"/workspace/qiskit_circuit_32q_10g_34085_28e917_5ead57_error_min.py\", line 84, in export_to_qasm_with_pytket\n    qasm_str_tket = circuit_to_qasm_str(tket_circ, header='qelib1',\n  File \"/usr/local/lib/python3.10/site-packages/pytket/qasm/qasm.py\", line 1122, in circuit_to_qasm_str\n    qasm_writer.add_op(command.op, command.args)\n  File \"/usr/local/lib/python3.10/site-packages/pytket/qasm/qasm.py\", line 1841, in add_op\n    raise QASMUnsupportedError(\npytket.qasm.qasm.QASMUnsupportedError: Cannot print command of type: PhasedX(0.804597, 0.5)\n",
+    "current_file": "qiskit_circuit_32q_10g_34085_28e917_5ead57_error_min.py",
+    "involved_functions": [
+        "export_to_qasm_with_pytket"
+    ]
+}
