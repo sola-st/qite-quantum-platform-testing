@@ -96,7 +96,7 @@ def list_files_in_folder(folder: Path, extension: str) -> Path:
 @click.option('--config', required=False, type=click.Path(
     exists=True, dir_okay=False, path_type=Path),
     help='The yaml file with parameters.')
-@click.option('--output', required=True, default='notebooks/executions',
+@click.option('--output', required=True, default='data/notebooks_executions',
               type=click.Path(file_okay=False, path_type=Path),
               help='The output folder to store the resulting file.')
 def main(
