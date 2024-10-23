@@ -1,8 +1,10 @@
 OPENQASM 2.0;
 include "qelib1.inc";
+gate dcx q0,q1 { cx q0,q1; cx q1,q0; }
 qreg qr[32];
 creg cr[32];
-rxx(5.467567) qr[17],qr[12];
+crz(4.324221) qr[4],qr[20];
+dcx qr[21],qr[29];
 measure qr[0] -> cr[0];
 measure qr[1] -> cr[1];
 measure qr[2] -> cr[2];

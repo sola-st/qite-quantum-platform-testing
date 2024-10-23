@@ -1,8 +1,8 @@
 """This is the content of the error message:
 {
-    "exception_message": "The circuits are not equivalent: /workspace/qiskit_circuit_32q_10g_8976_aee7cb_qc_pytket.qasm, /workspace/qiskit_circuit_32q_10g_8976_aee7cb_qc_qiskit.qasm",
-    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/qiskit_circuit_32q_10g_8976_aee7cb.py\", line 265, in <module>\n    compare_call(a_file, b_file)\n  File \"/workspace/qiskit_circuit_32q_10g_8976_aee7cb.py\", line 213, in compare_qasm_via_qcec\n    raise ValueError(\nValueError: The circuits are not equivalent: /workspace/qiskit_circuit_32q_10g_8976_aee7cb_qc_pytket.qasm, /workspace/qiskit_circuit_32q_10g_8976_aee7cb_qc_qiskit.qasm\n",
-    "current_file": "qiskit_circuit_32q_10g_8976_aee7cb.py",
+    "exception_message": "The circuits are not equivalent: /workspace/qiskit_circuit_32q_10g_159_29fa08_qc_pytket.qasm, /workspace/qiskit_circuit_32q_10g_159_29fa08_qc_qiskit.qasm",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/qiskit_circuit_32q_10g_159_29fa08.py\", line 268, in <module>\n    compare_call(a_file, b_file)\n  File \"/workspace/qiskit_circuit_32q_10g_159_29fa08.py\", line 216, in compare_qasm_via_qcec\n    raise ValueError(\nValueError: The circuits are not equivalent: /workspace/qiskit_circuit_32q_10g_159_29fa08_qc_pytket.qasm, /workspace/qiskit_circuit_32q_10g_159_29fa08_qc_qiskit.qasm\n",
+    "current_file": "qiskit_circuit_32q_10g_159_29fa08.py",
     "involved_functions": [
         "compare_qasm_via_qcec",
         "export_to_qasm_with_pytket",
@@ -24,7 +24,8 @@ qc = QuantumCircuit(qr, cr, name='qc')
 # Apply gate operations
 # <START_GATES>
 
-qc.rxx(5.467567, qr[17], qr[12])
+qc.crz(4.324221, qr[4], qr[20])
+qc.dcx(qr[21], qr[29])
 
 qc.measure(qr, cr)
 import os
@@ -113,7 +114,8 @@ def compare_qasm_via_qcec(path_qasm_a: str, path_qasm_b: str) ->None:
     from mqt import qcec
     result = qcec.verify(str(path_qasm_a), str(path_qasm_b))
     equivalence = str(result.equivalence)
-    if equivalence == 'equivalent':
+    if (equivalence == 'equivalent' or equivalence ==
+        'equivalent_up_to_global_phase'):
         print(f'The circuits are equivalent: {path_qasm_a}, {path_qasm_b}')
         return
     raise ValueError(

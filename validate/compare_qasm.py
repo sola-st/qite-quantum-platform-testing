@@ -120,7 +120,10 @@ def compare_circuits(pair: Tuple[Path, Path]) -> Optional[Dict[str, str]]:
     try:
         result = qcec.verify(str(a_file), str(b_file))
         equivalence = str(result.equivalence)
-        if equivalence == 'equivalent':
+        if (
+            equivalence == 'equivalent' or
+            equivalence == 'equivalent_up_to_global_phase'
+        ):
             console.log(f"[green]The circuits are equivalent:\n- {a_file.name}"
                         f"\n- {b_file.name}")
             return None

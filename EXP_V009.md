@@ -30,3 +30,21 @@ Run the program with the following command:
 ```shell
 docker run --rm -v "$(pwd)/program_bank/v004/2024_10_18__16_09__sample_errors/:/workspace" -w /workspace qiskit_runner python qiskit_circuit_32q_10g_8976_aee7cb_cfbaae_error_min.py
 ```
+
+**Example 2**:
+`../program_bank/v005/2024_10_22__14_17__sample_errors/qiskit_circuit_32q_10g_564_52d486_f2d8ef_error_min.py`
+
+Run the program with the following command:
+```shell
+docker run --rm -v "$(pwd)/program_bank/v005/2024_10_22__14_17__sample_errors/:/workspace" -w /workspace qiskit_runner python qiskit_circuit_32q_10g_564_52d486_f2d8ef_error_min.py
+```
+
+
+**Example 3**: after having excluded `equivalence_up_to_global_phase` from the comparison, the following error is raised:
+`../program_bank/v005/2024_10_22__22_32__sample_errors/qiskit_circuit_32q_10g_159_29fa08_4f5c57_error_min.py`
+
+Run the program with the following command:
+```shell
+docker run --rm -v "$(pwd)/program_bank/v005/2024_10_22__22_32__sample_errors/:/workspace" -w /workspace qiskit_runner python qiskit_circuit_32q_10g_159_29fa08_4f5c57_error_min.py
+```
+
