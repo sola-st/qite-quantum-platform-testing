@@ -27,3 +27,11 @@ def import_from_qasm_with_pennylane(file_path: str):
     circuit = qml.from_qasm(qasm_content)
     print(f"Circuit (PennyLane) imported correctly: {file_path}")
     return circuit
+
+
+def import_from_qasm_with_bqskit(file_path: str):
+    """Import a QASM file using bqskit."""
+    from bqskit import Circuit
+    bqskit_circuit = Circuit.from_file(file_path)
+    print(f"Circuit (bqskit) imported correctly: {file_path}")
+    return bqskit_circuit

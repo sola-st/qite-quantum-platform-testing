@@ -51,10 +51,17 @@ def export_to_qasm_with_pennylane(
     """Export a Qiskit circuit to a PennyLane QASM file."""
     import pennylane as qml
     from pennylane.tape import QuantumTape
+    from qiskit import QuantumCircuit
 
     # Convert Qiskit circuit to a simplified form
     simplified_qiskit_circ = qiskit_circ.decompose().decompose()
     n_qubits = simplified_qiskit_circ.num_qubits
+
+    # add at least one empty operation on each qubit to avoid the order change
+    prefix_circ = QuantumCircuit(n_qubits)
+    for i in range(n_qubits):
+        prefix_circ.id(i)
+    simplified_qiskit_circ = prefix_circ.compose(simplified_qiskit_circ)
 
     # Define measurement and PennyLane device
     measurements = [qml.expval(qml.PauliZ(i)) for i in range(n_qubits)]
@@ -66,7 +73,9 @@ def export_to_qasm_with_pennylane(
     # Extract the QASM from the PennyLane QNode
     with QuantumTape(shots=10) as tape:
         qml_circuit.construct([], {})
-        qasm_str_pennylane = qml_circuit.tape.to_openqasm()
+        qasm_str_pennylane = qml_circuit.tape.to_openqasm(
+            wires=sorted(
+                tape.wires))
 
     # Determine file path
     current_file = Path(__file__)
@@ -80,3 +89,22 @@ def export_to_qasm_with_pennylane(
 
     print(f"Saved the PennyLane circuit to {file_path_pennylane}")
     return file_path_pennylane.as_posix()
+
+
+def export_to_qasm_with_bqskit(
+        qiskit_circ: QuantumCircuit, var_name: str) -> Optional[str]:
+    """Export a Qiskit circuit to a BQSKit QASM file."""
+    from bqskit.ext import qiskit_to_bqskit
+    bqskit_circ = qiskit_to_bqskit(qiskit_circ)
+
+    # Determine file path
+    current_file = Path(__file__)
+    file_stem = current_file.stem
+    file_path_bqskit = current_file.with_name(
+        f"{file_stem}_{var_name}_bqskit.qasm")
+
+    # Save BQSKit circuit to QASM
+    bqskit_circ.save(str(file_path_bqskit))
+
+    print(f"Saved the BQSKit circuit to {file_path_bqskit}")
+    return file_path_bqskit.as_posix()

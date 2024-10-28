@@ -21,3 +21,6 @@ log.txt
 
 # cache
 .cache
+
+# temporary firectory
+.tmp/*

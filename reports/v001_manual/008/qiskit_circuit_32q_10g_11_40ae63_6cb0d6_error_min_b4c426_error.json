@@ -1,0 +1,8 @@
+{
+    "exception_message": "'DaggerGate' object has no attribute '_qasm_name'",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/qiskit_circuit_32q_10g_11_40ae63_6cb0d6_error_min.py\", line 97, in <module>\n    qasm_file = export_call(qiskit_circ=target_qc, var_name='qc')\n  File \"/workspace/qiskit_circuit_32q_10g_11_40ae63_6cb0d6_error_min.py\", line 87, in export_to_qasm_with_bqskit\n    bqskit_circ.save(str(file_path_bqskit))\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/circuit.py\", line 3246, in save\n    f.write(language.encode(self))\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/lang/qasm2/qasm2.py\", line 29, in encode\n    source += op.get_qasm()\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/operation.py\", line 101, in get_qasm\n    return self.gate.get_qasm(full_params, self.location)\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/gate.py\", line 50, in get_qasm\n    self.qasm_name,\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/gate.py\", line 38, in qasm_name\n    return getattr(self, '_qasm_name')\nAttributeError: 'DaggerGate' object has no attribute '_qasm_name'\n",
+    "current_file": "qiskit_circuit_32q_10g_11_40ae63_6cb0d6_error_min.py",
+    "involved_functions": [
+        "export_to_qasm_with_bqskit"
+    ]
+}
