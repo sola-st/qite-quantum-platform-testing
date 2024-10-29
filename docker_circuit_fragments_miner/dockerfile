@@ -2,7 +2,8 @@
 FROM python:3.10-slim
 
 
-ARG PR_NUMBER
+# ARG PR_NUMBER
+ARG COMMIT_HASH
 ARG UID=1000
 ARG GID=1000
 
@@ -37,7 +38,10 @@ WORKDIR /opt/qiskit
 # ALIAS FOR PULL REQUEST
 RUN git config --global alias.pr '!f() { git fetch -fu ${2:-origin} refs/pull/$1/head:pr/$1 && git checkout pr/$1; }; f'
 
-RUN git pr ${PR_NUMBER}
+# RUN git pr ${PR_NUMBER}
+
+# Checkout to the specific commit
+RUN git checkout ${COMMIT_HASH}
 
 # Copy content of current folder to /opt/instrumenters
 COPY . /opt/instrumenters

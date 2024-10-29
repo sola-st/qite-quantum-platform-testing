@@ -13,7 +13,7 @@ python -m docker_circuit_fragments_miner.test_suite_inspired_generator --test_su
 Build the docker container that runs the whole procedure on a specific PR.
 ```shell
 cd docker_circuit_fragments_miner
-docker build --build-arg PR_NUMBER=13370 --build-arg UID=$(id -u paltenmo) --build-arg GID=$(id -g paltenmo) -t qiskit_circuit_miner .
+docker build --build-arg COMMIT_HASH=cb486e6a312dccfcbb4d88e8f21d93455d1ddf82 --build-arg UID=$(id -u paltenmo) --build-arg GID=$(id -g paltenmo) -t qiskit_circuit_miner .
 ```
 
 Run the container, mounting the `data/circuit_fragments` directory to the container's `/opt/circuit_storage` directory.
@@ -36,10 +36,16 @@ screen -dmS qiskit_circuit_miner -L -Logfile mining_fragments.log bash -c "docke
 
 #### Inspection Process
 
+If the conda environment uses `qiskit==1.2.1`. and `symengine==0.13.0`, the following command can be used to inspect the circuit fragments:
+```shell
+python docker_circuit_fragments_miner/circuit_reader/show_fragments.py --dir_with_circuits_pkl data/circuit_fragments
+```
+
+Otherwise, the following steps are necessary:
 Build the docker container that reads the circuit using the specific PR version:
 ```shell
 cd docker_circuit_fragments_miner/circuit_reader
-docker build --build-arg PR_NUMBER=13370 --build-arg UID=$(id -u paltenmo) --build-arg GID=$(id -g paltenmo) -t qiskit_circuit_inspector .
+docker build --build-arg COMMIT_HASH=cb486e6a312dccfcbb4d88e8f21d93455d1ddf82 --build-arg UID=$(id -u paltenmo) --build-arg GID=$(id -g paltenmo) -t qiskit_circuit_inspector .
 ```
 
 Inspect the circuit fragments

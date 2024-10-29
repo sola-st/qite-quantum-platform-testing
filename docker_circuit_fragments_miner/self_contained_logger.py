@@ -27,9 +27,14 @@ except ImportError:
     # skip if this log is added to configuration python files before qiskit is installed
     pass
 import pickle
+import hashlib
 
 STORAGE_PATH = Path(
     '/opt/circuit_storage')
+
+
+def md5_hash(circuit):
+    return hashlib.md5(str(circuit.draw()).encode()).hexdigest()
 
 
 def log_quantum_circuits(scope: Optional[dict] = None) -> None:
@@ -65,7 +70,7 @@ def log_circuits(quantum_circuits: List[Any]) -> None:
 
 def log_circuit(circuit: Any) -> None:
     """Logs a single QuantumCircuit instance."""
-    circuit_hash = hash(circuit.draw())
+    circuit_hash = md5_hash(circuit)
     file_path = STORAGE_PATH / f"{circuit_hash}.pkl"
     with file_path.open('wb') as file:
         pickle.dump(circuit, file)
