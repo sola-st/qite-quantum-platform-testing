@@ -1,0 +1,66 @@
+# Use the official Python image as a parent image
+FROM python:3.10-slim
+
+
+ARG PR_NUMBER
+ARG UID=1000
+ARG GID=1000
+
+RUN groupadd -g $GID regularuser && \
+    useradd -m -u $UID -g $GID -s /bin/bash regularuser
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# make folder /opt/circuit_storage
+RUN mkdir /opt/circuit_storage
+# convert the ownership of /opt to regularuser
+RUN chown -R regularuser /opt
+RUN chown -R regularuser /opt/circuit_storage
+
+USER regularuser
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/home/regularuser/.cargo/bin:${PATH}"
+
+# INSTALL QISKIT FROM SOURCE - PULL REQUEST
+WORKDIR /opt
+# Clone the specific PR
+RUN git clone https://github.com/Qiskit/qiskit.git
+WORKDIR /opt/qiskit
+# ALIAS FOR PULL REQUEST
+RUN git config --global alias.pr '!f() { git fetch -fu ${2:-origin} refs/pull/$1/head:pr/$1 && git checkout pr/$1; }; f'
+
+RUN git pr ${PR_NUMBER}
+
+# Copy content of current folder to /opt/instrumenters
+COPY . /opt/instrumenters
+
+# Run the instrumenters
+WORKDIR /opt/instrumenters
+RUN pip install click rich
+RUN python test_suite_inspired_generator.py --test_suite_path /opt/qiskit --output_path /opt/qiskit_instrumented --abs_path_to_logger_file /opt/instrumenters/self_contained_logger.py
+
+WORKDIR /opt/qiskit_instrumented
+
+
+USER root
+# convert the ownership of /opt to regularuser
+RUN chown -R regularuser /opt
+USER regularuser
+
+# Install Python dependencies
+RUN pip install -e . && pip install -U tox
+
+
+# Set the default shell to bash
+SHELL ["/bin/bash", "-c"]
+
+# Set the default command to run when starting the container
+CMD ["bash"]
