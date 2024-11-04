@@ -91,6 +91,18 @@ program_bank/v007/2024_10_31__17_24__qiskit/qiskit_circuit_5q_10g_5_92b84e_5ea2d
 # continue...
 ```
 
+## Not Equivalent Circuits - Qiskit vs Pytket
+```shell
+program_bank/v007/2024_10_31__17_51__qiskit/qiskit_circuit_5q_10g_9_160f04_cfe9f1_error.json
+# continue... MOST PROMISING
+```
+
+To run the automatic triage process use the following command:
+```shell
+python -m analysis_and_reporting.triage --path_error_json program_bank/v007/2024_10_31__17_51__qiskit/qiskit_circuit_5q_10g_9_160f04_cfe9f1_error.json --parent_report_folder reports/v001_manual/ --clue_message 'not equivalent'
+```
+
+
 
 
 ### Mat::at when using QCEC
