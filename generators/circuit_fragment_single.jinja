@@ -1,0 +1,9 @@
+from qiskit import qasm2
+# <START_GATES>
+qc = qasm2.loads(
+    # Original qasm name: {{QASM_FILENAME}}
+"""
+{{QASM_STRING}}
+"""
+    , custom_instructions=qasm2.LEGACY_CUSTOM_INSTRUCTIONS)
+    # <END_GATES>

@@ -78,7 +78,7 @@ Convert the function above into a click v8 interface in Python.
 """
 
 import os
-import inspect
+import random
 import click
 from pathlib import Path
 from datetime import datetime
@@ -89,6 +89,7 @@ from generators.qiskit_gate_gen import generate_qiskit_code
 from uuid import uuid4
 import docker
 from generators.source_code_manipulation import get_source_code_functions_w_prefix
+from abc import ABC, abstractmethod
 import validate.functions_qasm_export as export_functions
 import validate.functions_qasm_import as import_functions
 import validate.functions_qasm_compare as compare_functions
@@ -116,17 +117,67 @@ def load_jinja_template(template_path: Path) -> Template:
     return Template(template_content)
 
 
-def generate_circuit_code(max_n_qubits: int, max_n_gates: int) -> str:
-    """Generates gate operations using Qiskit gate generator."""
-    gate_ops = generate_qiskit_code(
-        circuit_var='qc',
-        quantum_reg_var='qr',
-        classical_reg_var='cr',
-        max_qubits=max_n_qubits,
-        max_bits=max_n_qubits,
-        num_statements=max_n_gates
-    )
-    return "\n".join(gate_ops)
+class GenerationStrategy(ABC):
+    """Abstract base class for generation strategies."""
+
+    @abstractmethod
+    def generate(self) -> str:
+        """Generates the circuit code."""
+        pass
+
+
+class RandomGenerationStrategy(GenerationStrategy):
+    """Random generation strategy for Qiskit circuits."""
+
+    def __init__(self, max_n_qubits: int, max_n_gates: int, *args, **kwargs):
+        self.max_n_qubits = max_n_qubits
+        self.max_n_gates = max_n_gates
+
+    def generate(self) -> str:
+        """Generates gate operations using Qiskit gate generator."""
+        gate_ops = generate_qiskit_code(
+            circuit_var='qc',
+            quantum_reg_var='qr',
+            classical_reg_var='cr',
+            max_qubits=self.max_n_qubits,
+            max_bits=self.max_n_qubits,
+            num_statements=self.max_n_gates
+        )
+        current_file_folder = Path(__file__).parent
+        circuit_template = current_file_folder / 'circuit_random_ops.jinja'
+        with open(circuit_template, 'r') as f:
+            template_content = f.read()
+        template = Template(template_content)
+        source_code_gate_ops = "\n".join(gate_ops)
+        return template.render(
+            N_QUBITS=self.max_n_qubits,
+            GATE_OPS=source_code_gate_ops
+        )
+
+
+class CircuitFragmentsGenerationStrategy(GenerationStrategy):
+    """It re-combines existing QASM files to generate Qiskit circuits."""
+
+    def __init__(self, qasm_folder: Path, *args, **kwargs):
+        self.qasm_folder = qasm_folder
+
+    def generate(self) -> str:
+        """Generates gate operations by sampling a QASM file from the folder."""
+        qasm_files = list(self.qasm_folder.glob('*.qasm'))
+        if not qasm_files:
+            raise FileNotFoundError(
+                "No QASM files found in the specified seed folder.")
+        selected_qasm_file = random.choice(qasm_files)
+        with open(selected_qasm_file, 'r') as f:
+            qasm_content = f.read()
+        current_file_folder = Path(__file__).parent
+        circuit_template = current_file_folder / 'circuit_fragment_single.jinja'
+        with open(circuit_template, 'r') as f:
+            template_content = f.read()
+        template = Template(template_content)
+        return template.render(
+            QASM_STRING=qasm_content,
+            QASM_FILENAME=selected_qasm_file.name)
 
 
 def save_program_to_file(
@@ -138,11 +189,29 @@ def save_program_to_file(
     console.log(f"Program saved to: {file_path}")
 
 
+def get_generation_strategy(
+        strategy_name: str, **kwargs) -> GenerationStrategy:
+    """Returns the appropriate generation strategy object based on the strategy name."""
+    if strategy_name == 'random':
+        return RandomGenerationStrategy(
+            max_n_qubits=kwargs['max_n_qubits'],
+            max_n_gates=kwargs['max_n_gates']
+        )
+    elif strategy_name == 'circuit_fragments':
+        return CircuitFragmentsGenerationStrategy(
+            qasm_folder=kwargs['qasm_folder']
+        )
+    else:
+        raise ValueError(f"Unknown generation strategy: {strategy_name}")
+
+
 @click.command()
 @click.option('--output_folder', default='program_bank', type=str,
               required=True, help="Folder to store the generated programs.")
-@click.option('--prompt', default='generators/morphq.jinja', type=Path,
-              required=True, help="Path to the prompt template.")
+@click.option('--prompt', default='generators/scaffold_oracles.jinja',
+              type=Path, required=True, help="Path to the prompt template.")
+@click.option('--circuit_generation_strategy', default='random', type=str,
+              required=True, help="Strategy to generate the circuit.")
 @click.option('--max_n_qubits', default=5, type=int, required=True,
               help="Maximum number of qubits in the circuit.")
 @click.option('--max_n_gates', default=10, type=int, required=True,
@@ -151,13 +220,24 @@ def save_program_to_file(
               help="Maximum number of programs to generate.")
 @click.option('--perform_execution', is_flag=True, default=False,
               help="Flag to indicate whether to perform execution.")
+@click.option('--seed', default=None, type=int,
+              help="Seed for random reproducible generation (debug).")
+@click.option('--seed_qasm_folder', default=None, type=Path,
+              help="Optional folder containing QASM files for seeding.")
 def main(
-        output_folder: str, prompt: Path, max_n_qubits: int, max_n_gates: int,
-        max_n_programs: int, perform_execution: bool):
+        output_folder: str, prompt: Path, circuit_generation_strategy: str,
+        max_n_qubits: int, max_n_gates: int, max_n_programs: int,
+        perform_execution: bool, seed: Optional[int],
+        seed_qasm_folder: Optional[Path]):
     """
     CLI to generate Qiskit programs based on a MorphQ template and save them to files.
     """
     console.log("Starting Qiskit program generation...")
+
+    # Set the random seed if provided
+    if seed is not None:
+        random.seed(seed)
+        console.log(f"Random seed set to: {seed}")
 
     # Generate the output folder based on the current date and time
     output_path = generate_output_folder(
@@ -170,10 +250,14 @@ def main(
 
     for i in range(max_n_programs):
         # Generate the circuit code
-        gate_ops = generate_circuit_code(
+        generation_strategy = get_generation_strategy(
+            strategy_name=circuit_generation_strategy,
             max_n_qubits=max_n_qubits,
-            max_n_gates=max_n_gates
+            max_n_gates=max_n_gates,
+            qasm_folder=seed_qasm_folder
         )
+        qc_circuit_source = generation_strategy.generate()
+
         # get export functions
         export_functions_section = get_source_code_functions_w_prefix(
             prefix='export_to_qasm_with_', module=export_functions)
@@ -188,8 +272,7 @@ def main(
 
         # Render the program code using the template
         program_code = template.render(
-            N_QUBITS=max_n_qubits,
-            GATE_OPS=gate_ops,
+            QC_CIRCUIT_CODE=qc_circuit_source,
             FUNCTIONS_EXPORT_TO_QASM=export_functions_section,
             FUNCTION_IMPORT_FROM_QASM=import_functions_section,
             FUNCTIONS_COMPARE=compare_functions_section,

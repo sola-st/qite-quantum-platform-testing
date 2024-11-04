@@ -1,9 +1,10 @@
 import click
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import pickle
 from qiskit import QuantumCircuit
 from rich.console import Console
+from qiskit.qasm2 import dump
 
 """Script that reads all the pkl quantum circuits in the `circuit_fragment` folder and shows them.
 
@@ -64,9 +65,23 @@ def ensure_directory_exists(directory: Path) -> None:
 @click.option('--dir_with_circuits_pkl', required=True, type=click.Path(
     exists=True, file_okay=False, dir_okay=True, path_type=Path),
     help='Directory containing circuit fragments')
-def main(dir_with_circuits_pkl: Path) -> None:
+@click.option('--export_to_qasm', is_flag=True,
+              help='Flag to export circuits to QASM')
+@click.option('--dir_with_exported_qasm', type=click.Path(
+    file_okay=False, dir_okay=True, path_type=Path),
+    help='Directory to export QASM files (optional)')
+def main(
+        dir_with_circuits_pkl: Path, dir_with_exported_qasm: Optional[Path],
+        export_to_qasm: bool) -> None:
     """Main function to load and show quantum circuits from pickle files."""
     ensure_directory_exists(dir_with_circuits_pkl)
+
+    if export_to_qasm:
+        if dir_with_exported_qasm is None:
+            dir_with_exported_qasm = dir_with_circuits_pkl.parent / \
+                f"{dir_with_circuits_pkl.name}_qasm"
+        ensure_directory_exists(dir_with_exported_qasm)
+
     circuit_files = get_circuit_files(dir_with_circuits_pkl)
     if not circuit_files:
         console.print(
@@ -78,6 +93,9 @@ def main(dir_with_circuits_pkl: Path) -> None:
         try:
             circuit = load_circuit(file_path)
             show_circuit(circuit)
+            if export_to_qasm:
+                qasm_path = dir_with_exported_qasm / f"{file_path.stem}.qasm"
+                export_circuit_to_qasm(circuit, qasm_path)
         except (pickle.UnpicklingError, EOFError) as e:
             console.print(
                 f"Error loading circuit from {file_path}: {e}",
@@ -86,6 +104,17 @@ def main(dir_with_circuits_pkl: Path) -> None:
             console.print(
                 f"Unexpected error with file {file_path}: {e}",
                 style="bold red")
+        finally:
+            if export_to_qasm:
+                # check if empty qasm_path and remove
+                if qasm_path.exists() and qasm_path.stat().st_size == 0:
+                    qasm_path.unlink()
+
+
+def export_circuit_to_qasm(circuit: QuantumCircuit, qasm_path: Path) -> None:
+    """Export a quantum circuit to a QASM file."""
+    path = str(qasm_path)
+    dump(circuit, path)
 
 
 if __name__ == '__main__':

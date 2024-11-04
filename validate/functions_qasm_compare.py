@@ -3,7 +3,10 @@
 def compare_qasm_via_qcec(path_qasm_a: str, path_qasm_b: str) -> None:
     """Compare two QASM files using QCEC."""
     from mqt import qcec
-    result = qcec.verify(str(path_qasm_a), str(path_qasm_b))
+    result = qcec.verify(
+        str(path_qasm_a),
+        str(path_qasm_b),
+        transform_dynamic_circuit=True)
     equivalence = str(result.equivalence)
     if (
             equivalence == 'equivalent' or
