@@ -83,16 +83,22 @@ import click
 from pathlib import Path
 from datetime import datetime
 from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
 from typing import List, Tuple, Dict, Any, Optional
 from rich.console import Console
 from generators.qiskit_gate_gen import generate_qiskit_code
 from uuid import uuid4
 import docker
+from qiskit import QuantumCircuit
+from qiskit.qasm2 import load, dumps
+import pickle
 from generators.source_code_manipulation import get_source_code_functions_w_prefix
 from abc import ABC, abstractmethod
 import validate.functions_qasm_export as export_functions
 import validate.functions_qasm_import as import_functions
 import validate.functions_qasm_compare as compare_functions
+
+from generators.combine_circuits import combine_circuits
 
 from generators.docker_tooling import (
     run_program_in_docker,
@@ -156,7 +162,7 @@ class RandomGenerationStrategy(GenerationStrategy):
 
 
 class CircuitFragmentsGenerationStrategy(GenerationStrategy):
-    """It re-combines existing QASM files to generate Qiskit circuits."""
+    """It  samples existing QASM files to generate Qiskit circuits."""
 
     def __init__(self, qasm_folder: Path, *args, **kwargs):
         self.qasm_folder = qasm_folder
@@ -170,14 +176,62 @@ class CircuitFragmentsGenerationStrategy(GenerationStrategy):
         selected_qasm_file = random.choice(qasm_files)
         with open(selected_qasm_file, 'r') as f:
             qasm_content = f.read()
-        current_file_folder = Path(__file__).parent
-        circuit_template = current_file_folder / 'circuit_fragment_single.jinja'
-        with open(circuit_template, 'r') as f:
-            template_content = f.read()
-        template = Template(template_content)
-        return template.render(
+        env = Environment(loader=FileSystemLoader(Path(__file__).parent))
+        circuit_template = env.get_template('circuit_qasm_embedded.jinja')
+        return circuit_template.render(
             QASM_STRING=qasm_content,
             QASM_FILENAME=selected_qasm_file.name)
+
+
+class SequentialKnittingGenerationStrategy(GenerationStrategy):
+    """It combines two circuits sequentially to generate Qiskit circuits."""
+
+    def __init__(
+            self, seed_programs_folder: Path,
+            program_extensions: List[str] = [".pkl", ".qasm"],
+            *args, **kwargs):
+        self.seed_programs_folder = seed_programs_folder
+        self.program_extensions = program_extensions
+
+    def generate(self) -> str:
+        """Combine two circuits sequentially.
+
+        It could work with both QASM and PKL files.
+        """
+        qasm_files = list(self.seed_programs_folder.glob('*.qasm'))
+        pkl_files = list(self.seed_programs_folder.glob('*.pkl'))
+        if not qasm_files and not pkl_files:
+            raise FileNotFoundError(
+                "No QASM or PKL files found in the specified seed folder.")
+        selected_circuits = self._sample_group_until_success(
+            qasm_files + pkl_files)
+        sel_files, sel_circuits = zip(*selected_circuits)
+        combined_circuit = combine_circuits(*sel_circuits)
+        env = Environment(loader=FileSystemLoader(Path(__file__).parent))
+        circuit_template = env.get_template('circuit_qasm_embedded.jinja')
+        return circuit_template.render(
+            QASM_STRING=dumps(combined_circuit),
+            QASM_FILENAME=f"combined_{sel_files[0].stem}_{sel_files[1].stem}.qasm")
+
+    def _load_circuit(self, file_path: Path) -> QuantumCircuit:
+        """Load a quantum circuit from a file."""
+        if file_path.suffix == ".qasm":
+            return load(file_path)
+        elif file_path.suffix == ".pkl":
+            return pickle.load(file_path.open("rb"))
+
+    def _sample_group_until_success(
+            self, program_files: List[Path], sample_size: int = 2) -> List[Tuple[Path, QuantumCircuit]]:
+        """Sample two programs until both can be loaded successfully."""
+        circuit_group = []
+        while len(circuit_group) < sample_size:
+            selected_file = random.sample(program_files, 1)
+            try:
+                qc_circuit = self._load_circuit(selected_file[0])
+                circuit_group.append((selected_file[0], qc_circuit))
+            except Exception:
+                pass
+        return circuit_group
 
 
 def save_program_to_file(
@@ -199,8 +253,13 @@ def get_generation_strategy(
         )
     elif strategy_name == 'circuit_fragments':
         return CircuitFragmentsGenerationStrategy(
-            qasm_folder=kwargs['qasm_folder']
+            qasm_folder=kwargs['seed_program_folder']
         )
+    elif strategy_name == 'sequential_knitting':
+        return SequentialKnittingGenerationStrategy(
+            seed_programs_folder=kwargs['seed_program_folder'],
+            program_extensions=kwargs.get(
+                'program_extensions', [".qasm", ".pkl"]))
     else:
         raise ValueError(f"Unknown generation strategy: {strategy_name}")
 
@@ -222,13 +281,13 @@ def get_generation_strategy(
               help="Flag to indicate whether to perform execution.")
 @click.option('--seed', default=None, type=int,
               help="Seed for random reproducible generation (debug).")
-@click.option('--seed_qasm_folder', default=None, type=Path,
-              help="Optional folder containing QASM files for seeding.")
+@click.option('--seed_program_folder', default=None, type=Path,
+              help="Optional folder containing QASM/pkl files for seeding.")
 def main(
         output_folder: str, prompt: Path, circuit_generation_strategy: str,
         max_n_qubits: int, max_n_gates: int, max_n_programs: int,
         perform_execution: bool, seed: Optional[int],
-        seed_qasm_folder: Optional[Path]):
+        seed_program_folder: Optional[Path]):
     """
     CLI to generate Qiskit programs based on a MorphQ template and save them to files.
     """
@@ -254,7 +313,7 @@ def main(
             strategy_name=circuit_generation_strategy,
             max_n_qubits=max_n_qubits,
             max_n_gates=max_n_gates,
-            qasm_folder=seed_qasm_folder
+            seed_program_folder=seed_program_folder,
         )
         qc_circuit_source = generation_strategy.generate()
 

@@ -1,0 +1,14 @@
+# v008: support circuit generation strategies via concatenation
+
+# Changelog
+# - add support for concatenation of circuits
+
+commands:
+  - module: generators.morphq_like_w_oracles
+    arguments:
+      prompt: generators/scaffold_oracles.jinja
+      output_folder: program_bank/v008/
+      seed_program_folder: data/circuit_fragments
+      circuit_generation_strategy: "sequential_knitting"
+      max_n_programs: 10000
+      perform_execution: False
