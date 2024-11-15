@@ -42,35 +42,6 @@ class ParallelKnitter(BaseKnitter):
         self.sanitizers_only_circuit1 = sanitizers_only_circuit1 or []
         self.sanitizers_only_circuit2 = sanitizers_only_circuit2 or []
 
-    def replace_register_names(
-        self,
-        reference_list: Tuple[
-            Union[Qubit, Clbit, QuantumRegister, ClassicalRegister]],
-        register_bank: Dict[str, Union[QuantumRegister, ClassicalRegister]],
-        prefix: str,
-        qubit_shift: int = 0,
-        clbit_shift: int = 0,
-    ) -> Tuple[Union[Qubit, Clbit, QuantumRegister, ClassicalRegister]]:
-        """Replace the register or bit references with new ones.
-
-        The new name is the old name with a prefix, joined with an underscore.
-        The register bank is a dictionary that maps the new register names to
-        the new objects.
-        """
-        # print("Reference list: ", reference_list)
-        new_references = []
-        for reference in reference_list:
-            if isinstance(reference, (QuantumRegister, ClassicalRegister)):
-                new_name = f"{prefix}_{reference.name}"
-                new_register = register_bank[new_name]
-                new_references.append(new_register)
-            elif isinstance(reference, (Qubit, Clbit)):
-                new_name = f"{prefix}_{reference._register.name}"
-                new_register = register_bank[new_name]
-                new_references.append(
-                    new_register[reference._index + clbit_shift])
-        return tuple(new_references)
-
     def combine_circuits(self) -> QuantumCircuit:
         """Combine two quantum circuits in parallel.
 
@@ -108,44 +79,35 @@ class ParallelKnitter(BaseKnitter):
         new_dag = DAGCircuit()
         prefix_circuit1 = str(uuid4())[:6]
         prefix_circuit2 = str(uuid4())[:6]
-        reference_to_registers = {}
-        for qreg in self.circuit1.qregs:
-            new_name = f"{prefix_circuit1}_{qreg.name}"
-            new_qreg = QuantumRegister(qreg.size, new_name)
-            new_dag.add_qreg(new_qreg)
-            reference_to_registers[new_name] = new_qreg
-        for creg in self.circuit1.cregs:
-            new_name = f"{prefix_circuit1}_{creg.name}"
-            new_creg = ClassicalRegister(creg.size, new_name)
-            new_dag.add_creg(new_creg)
-            reference_to_registers[new_name] = new_creg
-        for qreg in self.circuit2.qregs:
-            new_name = f"{prefix_circuit2}_{qreg.name}"
-            new_qreg = QuantumRegister(qreg.size, new_name)
-            new_dag.add_qreg(new_qreg)
-            reference_to_registers[new_name] = new_qreg
-        for creg in self.circuit2.cregs:
-            new_name = f"{prefix_circuit2}_{creg.name}"
-            new_creg = ClassicalRegister(creg.size, new_name)
-            new_dag.add_creg(new_creg)
-            reference_to_registers[new_name] = new_creg
+        reference_to_registers = self._create_reference_to_registers(
+            qregs=self.circuit1.qregs,
+            cregs=self.circuit1.cregs,
+            prefix=prefix_circuit1,
+            new_dag=new_dag
+        )
+        reference_to_registers.update(self._create_reference_to_registers(
+            qregs=self.circuit2.qregs,
+            cregs=self.circuit2.cregs,
+            prefix=prefix_circuit2,
+            new_dag=new_dag
+        ))
 
         for prefix, dag_circuit in zip(
             [prefix_circuit1, prefix_circuit2],
                 [dag_circuit1, dag_circuit2]):
             for node in dag_circuit.topological_op_nodes():
-                new_qargs = self.replace_register_names(
+                new_qargs = self._replace_register_names(
                     node.qargs,
                     reference_to_registers,
                     prefix
                 )
-                new_cargs = self.replace_register_names(
+                new_cargs = self._replace_register_names(
                     node.cargs,
                     reference_to_registers,
                     prefix
                 )
                 if node.op._condition is not None:
-                    new_conditions = self.replace_register_names(
+                    new_conditions = self._replace_register_names(
                         [node.op._condition[0]],
                         reference_to_registers,
                         prefix
