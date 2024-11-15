@@ -92,6 +92,7 @@ import docker
 from qiskit import QuantumCircuit
 from qiskit.qasm2 import load, dumps
 import pickle
+from generators.strategies.base_generation import GenerationStrategy
 from generators.source_code_manipulation import get_source_code_functions_w_prefix
 from abc import ABC, abstractmethod
 import validate.functions_qasm_export as export_functions
@@ -121,15 +122,6 @@ def load_jinja_template(template_path: Path) -> Template:
     with open(template_path, 'r') as f:
         template_content = f.read()
     return Template(template_content)
-
-
-class GenerationStrategy(ABC):
-    """Abstract base class for generation strategies."""
-
-    @abstractmethod
-    def generate(self) -> str:
-        """Generates the circuit code."""
-        pass
 
 
 class RandomGenerationStrategy(GenerationStrategy):
