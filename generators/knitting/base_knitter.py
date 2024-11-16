@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Any, List, Optional, Dict, Tuple, Union
+from typing import Any, List, Optional, Dict, Tuple, Union, Callable
 from qiskit import QuantumCircuit
 from qiskit.converters import circuit_to_dag, dag_to_circuit
-from qiskit.dagcircuit import DAGCircuit
+from qiskit.dagcircuit import DAGCircuit, DAGOpNode
 from qiskit import QuantumRegister, ClassicalRegister
 from qiskit.circuit import Qubit, Clbit
 from uuid import uuid4
@@ -31,10 +31,21 @@ strategy.
 
 
 class BaseKnitter:
+
     def __init__(
-            self, circuit1: QuantumCircuit, circuit2: QuantumCircuit) -> None:
+        self,
+        circuit1: QuantumCircuit,
+        circuit2: QuantumCircuit,
+        sanitizers: Optional[List[Callable]] = None,
+        sanitizers_only_circuit1: Optional[List[Callable]] = None,
+        sanitizers_only_circuit2: Optional[List[Callable]] = None,
+    ) -> None:
+        """Initialize the BaseKnitter object."""
         self.circuit1 = circuit1
         self.circuit2 = circuit2
+        self.sanitizers = sanitizers or []
+        self.sanitizers_only_circuit1 = sanitizers_only_circuit1 or []
+        self.sanitizers_only_circuit2 = sanitizers_only_circuit2 or []
 
     def _combine_specific(self, circuit: QuantumCircuit,
                           combined_circuit: QuantumCircuit) -> None:
@@ -70,6 +81,22 @@ class BaseKnitter:
                     new_register[reference._index + clbit_shift])
         return tuple(new_references)
 
+    def _rename_registers(
+        self,
+        prefix: str,
+        registers: List[Union[QuantumRegister, ClassicalRegister]],
+    ) -> List[Union[QuantumRegister, ClassicalRegister]]:
+        """Rename the registers of a circuit."""
+        new_registers = []
+        for reg in registers:
+            new_name = f"{prefix}_{reg.name}"
+            if isinstance(reg, QuantumRegister):
+                new_reg = QuantumRegister(reg.size, new_name)
+            elif isinstance(reg, ClassicalRegister):
+                new_reg = ClassicalRegister(reg.size, new_name)
+            new_registers.append(new_reg)
+        return new_registers
+
     def _create_reference_to_registers(
             self,
             qregs: List[QuantumRegister],
@@ -89,3 +116,34 @@ class BaseKnitter:
             new_dag.add_creg(new_creg)
             reference_to_registers[new_name] = new_creg
         return reference_to_registers
+
+    def _apply_operation(
+            self, node: DAGOpNode,
+            prefix: str,
+            reference_to_registers:
+            Dict
+            [Union[QuantumRegister, ClassicalRegister],
+             Union[QuantumRegister, ClassicalRegister]],
+            new_dag: DAGCircuit) -> None:
+        """Apply an operation to the DAG with updated register names."""
+        new_qargs = self._replace_register_names(
+            node.qargs,
+            reference_to_registers,
+            prefix
+        )
+        new_cargs = self._replace_register_names(
+            node.cargs,
+            reference_to_registers,
+            prefix
+        )
+        if node.op._condition is not None:
+            new_conditions = self._replace_register_names(
+                [node.op._condition[0]],
+                reference_to_registers,
+                prefix
+            )
+            node.op._condition = (
+                new_conditions[0],
+                node.op._condition[1],
+            )
+        new_dag.apply_operation_back(node.op, new_qargs, new_cargs)
