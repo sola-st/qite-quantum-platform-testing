@@ -29,7 +29,12 @@ from typing import Any
 from rich.console import Console
 
 from .base_circuit_sanitizer import CircuitSanitizer
-from qiskit import QuantumCircuit
+from qiskit.circuit import (
+    QuantumCircuit,
+    Parameter
+)
+import random
+from typing import List
 from qiskit.converters import (
     circuit_to_dag,
     dag_to_circuit
@@ -46,15 +51,11 @@ class RemoveMeasurementsSanitizer(CircuitSanitizer):
 
     def _remove_measurements(self, circuit: Any) -> QuantumCircuit:
         """Helper function to remove measurements."""
-        new_circuit_data = []
-        for instruction in circuit.data:
-            if instruction.operation.name != 'measure':
-                new_circuit_data.append(instruction)
-        new_circuit = QuantumCircuit(circuit.num_qubits, circuit.num_clbits)
-        for instruction in new_circuit_data:
-            new_circuit.append(
-                instruction, circuit.qubits, circuit.clbits)
-        return new_circuit
+        dag = circuit_to_dag(circuit)
+        for node in dag.topological_op_nodes():
+            if node.name == 'measure':
+                dag.remove_op_node(node)
+        return dag_to_circuit(dag)
 
 
 class RemoveMidCircuitMeasurementsSanitizer(CircuitSanitizer):
@@ -80,5 +81,51 @@ class RemoveMidCircuitMeasurementsSanitizer(CircuitSanitizer):
             if node.name != 'measure':
                 dirty_qubits.update(node.qargs)
             elif any(qubit in dirty_qubits for qubit in node.qargs):
+                dag.remove_op_node(node)
+        return dag_to_circuit(dag)
+
+
+class AssignRandomParamsSanitizer(CircuitSanitizer):
+
+    def sanitize(self, circuit: Any) -> Any:
+        """Assign random values to all unbound parameters in the circuit."""
+        # circuit = self.prepare_circuit(circuit)
+        new_circuit = self._assign_random_params(circuit)
+        return new_circuit
+
+    def _assign_random_params(self, circuit: QuantumCircuit) -> QuantumCircuit:
+        """Helper function to assign random values to all unbound parameters."""
+        unbound_params = self._get_all_unbound_params(circuit)
+        for param in unbound_params:
+            circuit = circuit.assign_parameters(
+                {param: random.uniform(0, 2 * 3.14159)})
+        return circuit
+
+    def _get_all_unbound_params(self, circuit: QuantumCircuit) -> List[str]:
+        """Helper function to get all unbound parameters in the circuit."""
+        dag = circuit_to_dag(circuit)
+        unbound_params = set()
+        for node in dag.topological_op_nodes():
+            if node.op.params:
+                print("Node: ", node.op)
+                for param in node.op.params:
+                    if isinstance(param, Parameter):
+                        print("Parameter: ", param)
+                        param_name = str(param)
+                        unbound_params.add(param_name)
+        return list(unbound_params)
+
+
+class DropConditionedOperationsSanitizer(CircuitSanitizer):
+    def sanitize(self, circuit: Any) -> Any:
+        """Drop all conditioned operations from the circuit."""
+        new_circuit = self._drop_conditioned_operations(circuit)
+        return new_circuit
+
+    def _drop_conditioned_operations(self, circuit: Any) -> QuantumCircuit:
+        """Helper function to drop all conditioned operations."""
+        dag = circuit_to_dag(circuit)
+        for node in dag.topological_op_nodes():
+            if node.op.condition:
                 dag.remove_op_node(node)
         return dag_to_circuit(dag)

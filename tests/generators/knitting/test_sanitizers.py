@@ -2,9 +2,12 @@ import pytest
 from qiskit import QuantumCircuit
 from qiskit.circuit import Measure
 from qiskit.quantum_info import Operator
+from qiskit.circuit import Parameter
 from generators.knitting.sanitizers import (
     RemoveMeasurementsSanitizer,
-    RemoveMidCircuitMeasurementsSanitizer
+    RemoveMidCircuitMeasurementsSanitizer,
+    AssignRandomParamsSanitizer,
+    DropConditionedOperationsSanitizer
 )
 
 
@@ -97,3 +100,95 @@ def test_remove_mid_circuit_measurements():
 
     # Check that all mid-circuit measurements are removed
     is_unitary_if_removing_final_measurements(sanitized_qc)
+
+
+def test_assign_random_params():
+    """
+    Test that AssignRandomParamsSanitizer assigns random values to all unbound parameters.
+    """
+    # Create a quantum circuit with unbound parameters
+    theta = Parameter('θ')
+    phi = Parameter('φ')
+    qc = QuantumCircuit(2)
+    qc.rx(theta, 0)
+    qc.ry(phi, 1)
+    # gate with two parameters
+    qc.u(theta, phi, 0, 0)
+
+    # Apply the sanitizer
+    sanitizer = AssignRandomParamsSanitizer()
+    sanitized_qc = sanitizer.sanitize(qc)
+
+    print(f"Original circuit:\n{qc}")
+    print(f"Sanitized circuit:\n{sanitized_qc}")
+
+    # Check that all parameters are bound
+    assert not sanitized_qc.parameters, "There are still unbound parameters in the circuit"
+
+
+def test_assign_random_params_no_unbound():
+    """
+    Test that AssignRandomParamsSanitizer does not alter a circuit with no unbound parameters.
+    """
+    # Create a quantum circuit with no unbound parameters
+    qc = QuantumCircuit(2)
+    qc.h(0)
+    qc.cx(0, 1)
+
+    # Apply the sanitizer
+    sanitizer = AssignRandomParamsSanitizer()
+    sanitized_qc = sanitizer.sanitize(qc)
+
+    print(f"Original circuit:\n{qc}")
+    print(f"Sanitized circuit:\n{sanitized_qc}")
+    viz_circuit = qc.draw(output='text')
+    viz_sanitized = sanitized_qc.draw(output='text')
+
+    # Check that the circuit remains unchanged
+    assert f">{viz_circuit}<" == f">{viz_sanitized}<", "The circuit was altered despite having no unbound parameters"
+
+
+def test_drop_conditioned_operations():
+    """
+    Test that DropConditionedOperationsSanitizer removes all conditioned operations from the circuit.
+    """
+    # Create a quantum circuit with conditioned operations
+    qc = QuantumCircuit(2, 2)
+    qc.x(0)
+    qc.h(0).c_if(qc.cregs[0], 1)
+    qc.cx(0, 1).c_if(qc.cregs[0], 1)
+    qc.measure_all()
+
+    # Apply the sanitizer
+    sanitizer = DropConditionedOperationsSanitizer()
+    sanitized_qc = sanitizer.sanitize(qc)
+
+    print(f"Original circuit:\n{qc}")
+    print(f"Sanitized circuit:\n{sanitized_qc}")
+
+    # Check that all conditioned operations are removed
+    for instruction in sanitized_qc.data:
+        assert not instruction.operation.condition, "Circuit still has conditioned operations after sanitization"
+
+
+def test_drop_conditioned_operations_no_condition():
+    """
+    Test that DropConditionedOperationsSanitizer does not alter a circuit with no conditioned operations.
+    """
+    # Create a quantum circuit with no conditioned operations
+    qc = QuantumCircuit(2, 2)
+    qc.h(0)
+    qc.cx(0, 1)
+    qc.measure_all()
+
+    # Apply the sanitizer
+    sanitizer = DropConditionedOperationsSanitizer()
+    sanitized_qc = sanitizer.sanitize(qc)
+
+    print(f"Original circuit:\n{qc}")
+    print(f"Sanitized circuit:\n{sanitized_qc}")
+    viz_circuit = qc.draw(output='text')
+    viz_sanitized = sanitized_qc.draw(output='text')
+
+    # Check that the circuit remains unchanged
+    assert f">{viz_circuit}<" == f">{viz_sanitized}<", "The circuit was altered despite having no conditioned operations"
