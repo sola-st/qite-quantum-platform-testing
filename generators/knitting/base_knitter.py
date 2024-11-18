@@ -6,6 +6,7 @@ from qiskit.dagcircuit import DAGCircuit, DAGOpNode
 from qiskit import QuantumRegister, ClassicalRegister
 from qiskit.circuit import Qubit, Clbit
 from uuid import uuid4
+from copy import deepcopy
 
 
 """Module to describe a class that takes two circuits and returns a combined circuit.
@@ -36,6 +37,8 @@ class BaseKnitter:
         self,
         circuit1: QuantumCircuit,
         circuit2: QuantumCircuit,
+        prefix1: str = "1",
+        prefix2: str = "2",
         sanitizers: Optional[List[Callable]] = None,
         sanitizers_only_circuit1: Optional[List[Callable]] = None,
         sanitizers_only_circuit2: Optional[List[Callable]] = None,
@@ -43,9 +46,14 @@ class BaseKnitter:
         """Initialize the BaseKnitter object."""
         self.circuit1 = circuit1
         self.circuit2 = circuit2
+        self.prefix1 = prefix1
+        self.prefix2 = prefix2
         self.sanitizers = sanitizers or []
         self.sanitizers_only_circuit1 = sanitizers_only_circuit1 or []
         self.sanitizers_only_circuit2 = sanitizers_only_circuit2 or []
+        self.viz_dag = DAGCircuit()
+        self.viz_map_name_to_text = {}
+        self.viz_map_name_to_color = {}
 
     def _combine_specific(self, circuit: QuantumCircuit,
                           combined_circuit: QuantumCircuit) -> None:
@@ -136,14 +144,69 @@ class BaseKnitter:
             reference_to_registers,
             prefix
         )
+        new_op = deepcopy(node.op)
+        if node.op._condition is not None:
+            new_conditions = self._replace_register_names(
+                [new_op._condition[0]],
+                reference_to_registers,
+                prefix
+            )
+            new_op._condition = (
+                new_conditions[0],
+                node.op._condition[1],
+            )
+        new_dag.apply_operation_back(new_op, new_qargs, new_cargs)
+
+    def _apply_operation_viz(
+        self,
+        node: DAGOpNode,
+        prefix: str,
+        reference_to_registers: Dict[str, Union[QuantumRegister, ClassicalRegister]],
+    ) -> None:
+        """Apply an operation to the DAG with updated register names.
+
+        Assume that the register names have already been updated by the
+        normal apply operation function.
+        """
+        new_qargs = self._replace_register_names(
+            node.qargs,
+            reference_to_registers,
+            prefix
+        )
+        new_cargs = self._replace_register_names(
+            node.cargs,
+            reference_to_registers,
+            prefix
+        )
+        # create a fake circuit to visualize the DAG
+        new_name = f"{node.op.name}_{prefix}"
+        new_name_latex = node.op.name + "_{" + prefix + "}"
+        self.viz_map_name_to_text[new_name] = new_name_latex
+        self.viz_map_name_to_color[new_name] = "red" if prefix.startswith(
+            "1") else "blue"
+        qc_fake = QuantumCircuit(1, name=new_name)
+        qc_fake.x(0)
+        custom_gate = qc_fake.to_instruction()
         if node.op._condition is not None:
             new_conditions = self._replace_register_names(
                 [node.op._condition[0]],
                 reference_to_registers,
                 prefix
             )
-            node.op._condition = (
+            custom_gate._condition = (
                 new_conditions[0],
                 node.op._condition[1],
             )
-        new_dag.apply_operation_back(node.op, new_qargs, new_cargs)
+        self.viz_dag.apply_operation_back(custom_gate, new_qargs, new_cargs)
+
+    def get_viz_circuit(self) -> QuantumCircuit:
+        """Get the visualization circuit."""
+        return dag_to_circuit(self.viz_dag)
+
+    def get_viz_map_name_to_text(self) -> Dict[str, str]:
+        """Get the visualization map name to text."""
+        return dict(self.viz_map_name_to_text)
+
+    def get_viz_map_name_to_color(self) -> Dict[str, str]:
+        """Get the visualization map name to color."""
+        return dict(self.viz_map_name_to_color)

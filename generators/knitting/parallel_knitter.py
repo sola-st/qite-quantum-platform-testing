@@ -65,22 +65,34 @@ class ParallelKnitter(BaseKnitter):
         dag_circuit1 = circuit_to_dag(self.circuit1)
         dag_circuit2 = circuit_to_dag(self.circuit2)
         new_dag = DAGCircuit()
-        prefix_circuit1 = str(uuid4())[:6]
-        prefix_circuit2 = str(uuid4())[:6]
         reference_to_registers = self._create_reference_to_registers(
             qregs=self.circuit1.qregs,
             cregs=self.circuit1.cregs,
-            prefix=prefix_circuit1,
+            prefix=self.prefix1,
             new_dag=new_dag
         )
         reference_to_registers.update(self._create_reference_to_registers(
             qregs=self.circuit2.qregs,
             cregs=self.circuit2.cregs,
-            prefix=prefix_circuit2,
+            prefix=self.prefix2,
             new_dag=new_dag
         ))
+        # initialize registers for the viz DAG
+        self._create_reference_to_registers(
+            qregs=self.circuit1.qregs,
+            cregs=self.circuit1.cregs,
+            prefix=self.prefix1,
+            new_dag=self.viz_dag
+        )
+        self._create_reference_to_registers(
+            qregs=self.circuit2.qregs,
+            cregs=self.circuit2.cregs,
+            prefix=self.prefix2,
+            new_dag=self.viz_dag
+        )
+
         for prefix, dag_circuit in zip(
-            [prefix_circuit1, prefix_circuit2],
+            [self.prefix1, self.prefix2],
             [dag_circuit1, dag_circuit2]
         ):
             for node in dag_circuit.topological_op_nodes():
@@ -89,6 +101,12 @@ class ParallelKnitter(BaseKnitter):
                     prefix=prefix,
                     reference_to_registers=reference_to_registers,
                     new_dag=new_dag
+                )
+                # add fake nodes to the viz DAG
+                self._apply_operation_viz(
+                    node=node,
+                    prefix=prefix,
+                    reference_to_registers=reference_to_registers
                 )
 
         combined_qc = dag_to_circuit(new_dag)
