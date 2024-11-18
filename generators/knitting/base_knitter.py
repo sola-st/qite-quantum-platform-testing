@@ -89,6 +89,25 @@ class BaseKnitter:
                     new_register[reference._index + clbit_shift])
         return tuple(new_references)
 
+    def _remap_registers(
+            self,
+            register_to_map: Tuple[
+                Union[Qubit, Clbit, QuantumRegister, ClassicalRegister]],
+            mapping_old_name_to_register: Dict[
+                str, Union[QuantumRegister, ClassicalRegister]]
+    ) -> Tuple[Union[Qubit, Clbit, QuantumRegister, ClassicalRegister]]:
+        """Remap the registers to the new ones."""
+        new_registers = []
+        for register in register_to_map:
+            if isinstance(register, (QuantumRegister, ClassicalRegister)):
+                new_registers.append(
+                    mapping_old_name_to_register
+                    [register.name])
+            elif isinstance(register, (Qubit, Clbit)):
+                new_register = mapping_old_name_to_register[register._register.name]
+                new_registers.append(new_register[register._index])
+        return tuple(new_registers)
+
     def _rename_registers(
         self,
         prefix: str,
@@ -124,6 +143,67 @@ class BaseKnitter:
             new_dag.add_creg(new_creg)
             reference_to_registers[new_name] = new_creg
         return reference_to_registers
+
+    def _remap_op_to_new_registers(
+            self, node: DAGOpNode,
+            reference_to_registers: Dict[
+                str, Union[QuantumRegister, ClassicalRegister]],
+            viz_subscript: str = None,
+            viz_color: str = None,
+            viz_add_as_fake: bool = False
+        ) -> Tuple[
+            DAGOpNode,
+            List[Union[Qubit, Clbit, QuantumRegister, ClassicalRegister]],
+            List[Union[Qubit, Clbit, QuantumRegister, ClassicalRegister]]]:
+        """Remap the operation to the new registers.
+
+        This method replaces any occurrences of registers or quantum/classical bits
+        in the operation with the new ones provided in the reference_to_registers mapping.
+
+        Args:
+            node (DAGOpNode): The operation node to be remapped.
+            reference_to_registers
+                A dictionary mapping the original register names to the new registers.
+            viz_subscript (str, optional): An optional subscript to be added to the operation's name
+                for visualization purposes. Defaults to None.
+            viz_color (str, optional): An optional color to be associated with the operation's name
+                for visualization purposes. If provided, viz_subscript must also be provided. Defaults to None.
+
+        Returns:
+            A tuple containing the remapped operation node, the list of new quantum arguments, and the list of new classical arguments.
+        """
+        if viz_subscript:
+            standard_node_name = f"{node.op.name}_{viz_subscript}"
+            latex_name = node.op.name + "_{" + viz_subscript + "}"
+        else:
+            standard_node_name = node.op.name
+            latex_name = node.op.name
+        if viz_add_as_fake:
+            qc_fake = QuantumCircuit(1, name=standard_node_name)
+            qc_fake.x(0)
+            fake_op = qc_fake.to_instruction()
+            new_op = deepcopy(fake_op)
+        else:
+            new_op = deepcopy(node.op)
+        new_qargs = self._remap_registers(node.qargs, reference_to_registers)
+        new_cargs = self._remap_registers(node.cargs, reference_to_registers)
+        if node.op._condition is not None:
+            new_conditions = self._remap_registers(
+                [node.op._condition[0]],
+                reference_to_registers
+            )
+            new_op._condition = (
+                new_conditions[0],
+                node.op._condition[1],
+            )
+        if viz_subscript:
+            self.viz_map_name_to_text[standard_node_name] = latex_name
+            if viz_color:
+                self.viz_map_name_to_color[standard_node_name] = viz_color
+        else:
+            if viz_color:
+                print("Warning: Viz color provided without subscript.")
+        return new_op, new_qargs, new_cargs
 
     def _apply_operation(
             self, node: DAGOpNode,

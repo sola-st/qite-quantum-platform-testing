@@ -129,3 +129,13 @@ class DropConditionedOperationsSanitizer(CircuitSanitizer):
             if node.op.condition:
                 dag.remove_op_node(node)
         return dag_to_circuit(dag)
+
+
+class AnonymizeRegistersSanitizer(CircuitSanitizer):
+    def sanitize(self, circuit: Any) -> Any:
+        """Anonymize register names in the circuit."""
+        n_qubits = circuit.num_qubits
+        n_clbits = circuit.num_clbits
+        new_circuit = QuantumCircuit(n_qubits, n_clbits)
+        new_circuit.compose(circuit, inplace=True)
+        return new_circuit

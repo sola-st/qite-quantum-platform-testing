@@ -3,6 +3,7 @@ from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
 from generators.knitting.parallel_knitter import ParallelKnitter
 from generators.knitting.interleaved_knitter import InterleavedKnitter
 from generators.knitting.unitary_knitter import UnitaryKnitter
+from generators.knitting.sequential_knitter import SequentialKnitter
 from pathlib import Path
 import tempfile
 import filecmp
@@ -141,6 +142,48 @@ def test_combine_circuits_with_c_if():
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         temp_output_path = Path(tmpdirname) / 'combined_circuit_with_c_if.png'
+        qc_viz.draw("mpl",
+                    style={
+                        "displaytext": displaytext,
+                        "displaycolor": displaycolor},
+                    filename=temp_output_path)
+
+        assert filecmp.cmp(
+            temp_output_path, expected_image), "The generated image does not match the expected image"
+
+
+def test_combine_circuits_sequential(qc_1, qc_2):
+    """
+    Test that the combine_circuits method correctly combines two quantum circuits sequentially.
+    """
+
+    print("QC1")
+    print(qc_1)
+    print("QC2")
+    print(qc_2)
+
+    sk = SequentialKnitter(qc_1, qc_2)
+    qc_combine = sk.combine_circuits()
+
+    print("Combined circuit:")
+    print(qc_combine)
+
+    qc_viz = sk.get_viz_circuit()
+    assert qc_viz is not None, "The visualized circuit should not be None"
+
+    print("Viz map name to text")
+    print(sk.viz_map_name_to_text)
+    print("Viz map name to color")
+    print(sk.viz_map_name_to_color)
+
+    displaytext = sk.get_viz_map_name_to_text()
+    displaycolor = sk.get_viz_map_name_to_color()
+
+    expected_image = Path(
+        'tests/artifacts/viz/combined_circuit_sequential.png')
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        temp_output_path = Path(tmpdirname) / 'combined_circuit_sequential.png'
         qc_viz.draw("mpl",
                     style={
                         "displaytext": displaytext,

@@ -1,8 +1,13 @@
 import pytest
-from qiskit import QuantumCircuit
+from qiskit import (
+    QuantumCircuit,
+    QuantumRegister,
+    ClassicalRegister,
+)
 from qiskit.circuit import Measure
 from qiskit.quantum_info import Operator
 from qiskit.circuit import Parameter
+from generators.knitting.sanitizers import AnonymizeRegistersSanitizer
 from generators.knitting.sanitizers import (
     RemoveMeasurementsSanitizer,
     RemoveMidCircuitMeasurementsSanitizer,
@@ -192,3 +197,42 @@ def test_drop_conditioned_operations_no_condition():
 
     # Check that the circuit remains unchanged
     assert f">{viz_circuit}<" == f">{viz_sanitized}<", "The circuit was altered despite having no conditioned operations"
+
+
+def test_anonymize_registers():
+    """
+    Test that AnonymizeRegistersSanitizer anonymizes register names in the circuit.
+    """
+    # expected circuit
+    qc_anonymized = QuantumCircuit(2, 2)
+    qc_anonymized.h(0)
+    qc_anonymized.cx(0, 1)
+    qc_anonymized.measure(0, 0)
+    qc_anonymized.measure(0, 1)
+
+    # Create a quantum circuit with named registers
+    areg = QuantumRegister(1, 'alice')
+    extra_reg = QuantumRegister(1, 'extra')
+    breg = ClassicalRegister(2, 'bob')
+    qc = QuantumCircuit(areg, breg, extra_reg)
+    qc.h(areg[0])
+    qc.cx(areg[0], extra_reg[0])
+    qc.measure(areg, breg)
+
+    # Apply the sanitizer
+    sanitizer = AnonymizeRegistersSanitizer()
+    sanitized_qc = sanitizer.sanitize(qc)
+
+    print(f"Original circuit:\n{qc}")
+    print(f"Sanitized circuit:\n{sanitized_qc}")
+
+    # Check that there is a single quantum register and a single classical register
+    assert len(
+        sanitized_qc.qregs) == 1, "There should be only one quantum register"
+    assert len(
+        sanitized_qc.cregs) == 1, "There should be only one classical register"
+    assert sanitized_qc.qregs[0].name == 'q', "The quantum register should be named 'q'"
+    assert sanitized_qc.cregs[0].name == 'c', "The classical register should be named 'c'"
+
+    # Check that the circuit is equivalent to the expected circuit
+    assert f">{qc_anonymized.draw(output='text')}<" == f">{sanitized_qc.draw(output='text')}<", "The circuit was not anonymized correctly"
