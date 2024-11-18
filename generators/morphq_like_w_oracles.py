@@ -93,6 +93,7 @@ from qiskit import QuantumCircuit
 from qiskit.qasm2 import load, dumps
 import pickle
 from generators.strategies.base_generation import GenerationStrategy
+from generators.strategies.iteration_v001 import SPIUKnittingGenerationStrategy
 from generators.source_code_manipulation import get_source_code_functions_w_prefix
 from abc import ABC, abstractmethod
 import validate.functions_qasm_export as export_functions
@@ -249,6 +250,11 @@ def get_generation_strategy(
         )
     elif strategy_name == 'sequential_knitting':
         return SequentialKnittingGenerationStrategy(
+            seed_programs_folder=kwargs['seed_program_folder'],
+            program_extensions=kwargs.get(
+                'program_extensions', [".qasm", ".pkl"]))
+    elif strategy_name == 'spiu_knitting':
+        return SPIUKnittingGenerationStrategy(
             seed_programs_folder=kwargs['seed_program_folder'],
             program_extensions=kwargs.get(
                 'program_extensions', [".qasm", ".pkl"]))
