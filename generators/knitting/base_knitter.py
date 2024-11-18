@@ -162,22 +162,26 @@ class BaseKnitter:
         node: DAGOpNode,
         prefix: str,
         reference_to_registers: Dict[str, Union[QuantumRegister, ClassicalRegister]],
+        apply_register_renaming: bool = True,
     ) -> None:
         """Apply an operation to the DAG with updated register names.
 
         Assume that the register names have already been updated by the
         normal apply operation function.
         """
-        new_qargs = self._replace_register_names(
-            node.qargs,
-            reference_to_registers,
-            prefix
-        )
-        new_cargs = self._replace_register_names(
-            node.cargs,
-            reference_to_registers,
-            prefix
-        )
+        new_qargs = node.qargs
+        new_cargs = node.cargs
+        if apply_register_renaming:
+            new_qargs = self._replace_register_names(
+                node.qargs,
+                reference_to_registers,
+                prefix
+            )
+            new_cargs = self._replace_register_names(
+                node.cargs,
+                reference_to_registers,
+                prefix
+            )
         # create a fake circuit to visualize the DAG
         new_name = f"{node.op.name}_{prefix}"
         new_name_latex = node.op.name + "_{" + prefix + "}"

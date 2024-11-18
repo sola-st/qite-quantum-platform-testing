@@ -145,12 +145,10 @@ class InterleavedKnitter(BaseKnitter):
         dag_circuit1 = circuit_to_dag(self.circuit1)
         dag_circuit2 = circuit_to_dag(self.circuit2)
         new_dag = DAGCircuit()
-        prefix_circuit1 = str(uuid4())[:6]
-        prefix_circuit2 = str(uuid4())[:6]
         registers_circ1 = self._rename_registers(
-            prefix_circuit1, self.circuit1.qregs + self.circuit1.cregs)
+            self.prefix1, self.circuit1.qregs + self.circuit1.cregs)
         registers_circ2 = self._rename_registers(
-            prefix_circuit2, self.circuit2.qregs + self.circuit2.cregs)
+            self.prefix2, self.circuit2.qregs + self.circuit2.cregs)
         reference_to_registers = self._get_register_mapping(
             registers_circ1, registers_circ2)
         # add the new registers to the new DAG
@@ -158,6 +156,8 @@ class InterleavedKnitter(BaseKnitter):
         for new_reg in unique_new_registers:
             new_dag.add_qreg(new_reg) if isinstance(
                 new_reg, QuantumRegister) else new_dag.add_creg(new_reg)
+            self.viz_dag.add_qreg(new_reg) if isinstance(
+                new_reg, QuantumRegister) else self.viz_dag.add_creg(new_reg)
 
         nodes_circuit1 = list(dag_circuit1.topological_op_nodes())
         nodes_circuit2 = list(dag_circuit2.topological_op_nodes())
@@ -167,11 +167,19 @@ class InterleavedKnitter(BaseKnitter):
             if i < len(nodes_circuit1):
                 self._apply_operation(
                     nodes_circuit1[i],
-                    prefix_circuit1, reference_to_registers, new_dag)
+                    self.prefix1, reference_to_registers, new_dag)
+                self._apply_operation_viz(
+                    nodes_circuit1[i],
+                    self.prefix1, reference_to_registers
+                )
             if i < len(nodes_circuit2):
                 self._apply_operation(
                     nodes_circuit2[i],
-                    prefix_circuit2, reference_to_registers, new_dag)
+                    self.prefix2, reference_to_registers, new_dag)
+                self._apply_operation_viz(
+                    nodes_circuit2[i],
+                    self.prefix2, reference_to_registers
+                )
 
         combined_qc = dag_to_circuit(new_dag)
         return combined_qc
