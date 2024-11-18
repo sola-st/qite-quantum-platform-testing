@@ -79,6 +79,15 @@ console = Console()
     default="notebooks/010_Triage_Not_Equivalence.ipynb",
     help='Path to the analysis notebook file.'
 )
+def analyze_and_report_cli(
+        path_error_json: str, path_program: str, parent_report_folder: str,
+        clue_message: str, analysis_notebook: str) -> None:
+    """Analyzes and dissects an error message."""
+    analyze_and_report(
+        path_error_json, path_program, parent_report_folder, clue_message,
+        analysis_notebook)
+
+
 def analyze_and_report(
         path_error_json: str, path_program: str, parent_report_folder: str,
         clue_message: str, analysis_notebook: str) -> None:
@@ -94,11 +103,15 @@ def analyze_and_report(
     report_folder_path = create_report_folder(parent_report_folder_path)
     copy_files_to_report_folder(
         error_json_path, program_path, report_folder_path)
+    # error in the report folder
+    # this is needed so that everything now is relative to this folder
+    error_json_path_in_report = report_folder_path / error_json_path.name
     minimize_instructions(
         input_folder=report_folder_path,
-        path_to_error=error_json_path,
+        path_to_error=error_json_path_in_report,
         clue_message=clue_message)
-    minimized_program_path = Path(str(error_json_path)[:-5] + '_min.py')
+    minimized_program_path = Path(
+        str(error_json_path_in_report)[:-5] + '_min.py')
     # report_folder_path = Path("reports/v001_manual/2024_11_04__14_48/")
     run_program_in_docker(
         folder_with_file=report_folder_path,
@@ -139,15 +152,18 @@ def run_analysis_ipynb_on_minimized_program(
     parameters = {
         'PATH_QASM_A': str(qasm_files[0]) if len(qasm_files) > 0 else None,
         'PATH_QASM_B': str(qasm_files[1]) if len(qasm_files) > 1 else None,
-        'PATH_PYTHON_FILE': str(minimized_program_path)
-    }
+        'PATH_PYTHON_FILE': str(minimized_program_path)}
 
     output_notebook = report_folder_path / 'analysis_output.ipynb'
-    pm.execute_notebook(
-        input_path=str(analysis_notebook),
-        output_path=str(output_notebook),
-        parameters=parameters)
+    try:
+        pm.execute_notebook(
+            input_path=str(analysis_notebook),
+            output_path=str(output_notebook),
+            parameters=parameters)
+        console.log(f"Analysis notebook executed: {output_notebook}")
+    except Exception as e:
+        console.log(f"Error executing analysis notebook: {e}")
 
 
 if __name__ == '__main__':
-    analyze_and_report()
+    analyze_and_report_cli()
