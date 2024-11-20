@@ -40,6 +40,12 @@ class SPIUKnittingGenerationStrategy(
         self.seed_programs_folder = seed_programs_folder
         self.program_extensions = program_extensions
 
+    def _dummy_circuit(self) -> QuantumCircuit:
+        toy_qc = QuantumCircuit(1, 1)
+        toy_qc.h(0)
+        toy_qc.measure(0, 0)
+        return toy_qc
+
     def generate(self) -> str:
         """Generate a combined circuit using sequential, parallel, and interleaved unitary operations."""
         program_files = list(self.seed_programs_folder.glob('*'))
@@ -51,11 +57,17 @@ class SPIUKnittingGenerationStrategy(
         sel_files, sel_circuits = zip(*selected_circuits)
         combined_circuit, provenance = self._combine_circuits(sel_circuits)
 
+        try:
+            qasm_combined = dumps(combined_circuit)
+        except Exception as e:
+            console.log(f"Error dumping QASM dumps of combined circuit: {e}")
+            qasm_combined = dumps(self._dummy_circuit())
+
         env = Environment(loader=FileSystemLoader(
             Path(__file__).parent.parent))
         circuit_template = env.get_template('circuit_qasm_embedded.jinja')
         return circuit_template.render(
-            QASM_STRING=dumps(combined_circuit),
+            QASM_STRING=qasm_combined,
             QASM_FILENAME=f"combined_{sel_files[0].stem}_{sel_files[1].stem}.qasm . strategy: {provenance}"
         )
 
@@ -91,12 +103,18 @@ class SPIUKnittingGenerationStrategy(
             UnitaryKnitter]
         selected_knitter_class = random.choice(knitter_classes)
         console.log(f"Selected knitter class: {selected_knitter_class}")
-        knitter = selected_knitter_class(circuits[0], circuits[1])
-        combined_circuit = knitter.combine_circuits()
 
-        sanitizer_unbound_parameters = AssignRandomParamsSanitizer()
-        sanitized_qc = sanitizer_unbound_parameters.sanitize(combined_circuit)
+        try:
+            knitter = selected_knitter_class(circuits[0], circuits[1])
+            combined_circuit = knitter.combine_circuits()
 
-        sanitized_qc = assign_random_params(sanitized_qc)
+            sanitizer_unbound_parameters = AssignRandomParamsSanitizer()
+            sanitized_qc = sanitizer_unbound_parameters.sanitize(
+                combined_circuit)
+
+            sanitized_qc = assign_random_params(sanitized_qc)
+        except Exception as e:
+            console.log(f"Error during combination: {e}")
+            sanitized_qc = self._dummy_circuit()
 
         return sanitized_qc, str(selected_knitter_class)
