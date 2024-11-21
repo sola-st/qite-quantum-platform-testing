@@ -24,6 +24,17 @@ print("Hello, World!")
 """
 
 
+def is_docker_available():
+    try:
+        client = docker.from_env()
+        client.ping()  # Pings the Docker daemon to check availability
+        return True
+    except docker.errors.DockerException:
+        return False
+
+
+@pytest.mark.skipif(not is_docker_available(),
+                    reason="Docker is not available")
 def get_running_container_commands():
     """
     Retrieve the commands used to run all currently running Docker containers.
@@ -41,6 +52,8 @@ def get_running_container_commands():
     return commands
 
 
+@pytest.mark.skipif(not is_docker_available(),
+                    reason="Docker is not available")
 def test_hello_world(hello_world_file_content):
     """
     Test that run_program_in_docker_w_timeout successfully runs a simple Python program in a Docker container.
