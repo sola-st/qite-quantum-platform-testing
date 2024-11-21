@@ -77,8 +77,8 @@ class UnitaryKnitter(BaseKnitter):
             self.circuit2, qreg_combined[: self.circuit2.num_qubits],
             creg_combined[: self.circuit2.num_clbits], inplace=True)
 
-        print("Combined circuit: ")
-        print(combined_circuit)
+        # print("Combined circuit: ")
+        # print(combined_circuit)
 
         # create viz DAG
         self.combine_dag = circuit_to_dag(combined_circuit)

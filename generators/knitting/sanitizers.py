@@ -77,7 +77,7 @@ class RemoveMidCircuitMeasurementsSanitizer(CircuitSanitizer):
         dag = circuit_to_dag(circuit)
         dirty_qubits = set()
         for node in list(dag.topological_op_nodes())[::-1]:
-            print(node.name)
+            # print(node.name)
             if node.name != 'measure':
                 dirty_qubits.update(node.qargs)
             elif any(qubit in dirty_qubits for qubit in node.qargs):
@@ -107,10 +107,10 @@ class AssignRandomParamsSanitizer(CircuitSanitizer):
         unbound_params = set()
         for node in dag.topological_op_nodes():
             if node.op.params:
-                print("Node: ", node.op)
+                # print("Node: ", node.op)
                 for param in node.op.params:
                     if isinstance(param, Parameter):
-                        print("Parameter: ", param)
+                        # print("Parameter: ", param)
                         param_name = str(param)
                         unbound_params.add(param_name)
         return list(unbound_params)
