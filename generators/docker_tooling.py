@@ -3,6 +3,7 @@ import docker
 from pathlib import Path
 from typing import Tuple
 import subprocess
+import threading
 
 
 def _execute_in_docker(
@@ -75,5 +76,80 @@ def run_program_in_docker_w_timeout(
     except subprocess.TimeoutExpired:
         if console:
             console.log(f"Execution timed out after {timeout} seconds.")
+            result = subprocess.run(
+                ["docker", "ps", "-q", "--filter", "ancestor=qiskit_runner",
+                 "|", "xargs", "-r", "docker", "stop"],
+                capture_output=True, text=True)
+            console.log(f"Stopped containers: {result.stdout}")
         else:
             print(f"Execution timed out after {timeout} seconds.")
+
+
+def run_program_in_docker_pypi(
+        folder_with_file: Path,
+        file_name: str,
+        timeout: int = 60,
+        console=None) -> None:
+    """Runs the generated program in a Docker container with a timeout.
+
+    It uses the pypi docker package to run the program in a container and get its container id to stop it if it times out.
+    """
+    client = docker.from_env()
+    abs_folder = folder_with_file.resolve()
+    container = None
+
+    def stop_container():
+        if container:
+            container.stop()
+            if console:
+                console.log(
+                    f"Container {container.id} stopped due to timeout.")
+            else:
+                print(f"Container {container.id} stopped due to timeout.")
+
+    try:
+        container = client.containers.run(
+            image='qiskit_runner',
+            command=f"python /workspace/{file_name}",
+            volumes={str(abs_folder): {'bind': '/workspace', 'mode': 'rw'}},
+            working_dir='/workspace',
+            detach=True
+        )
+        if console:
+            console.log(f"Container {container.id} started.")
+        else:
+            print(f"Container {container.id} started.")
+
+        timer = threading.Timer(timeout, stop_container)
+        timer.start()
+
+        result = container.wait()
+        success = result['StatusCode'] == 0
+        output = container.logs().decode()
+
+        if success:
+            if console:
+                console.log(f"Program {file_name} executed successfully.")
+                console.print(f"Output: {output}")
+            else:
+                print(f"Program {file_name} executed successfully.")
+                print(f"Output: {output}")
+        else:
+            if console:
+                console.log(f"Failed to execute {file_name} in Docker.")
+                console.print(f"Error: {output}", style="bold red")
+            else:
+                print(f"Failed to execute {file_name} in Docker.")
+                print(f"Error: {output}")
+
+    except docker.errors.DockerException as e:
+        if console:
+            console.log(f"Error running container: {e}", style="bold red")
+        else:
+            print(f"Error running container: {e}")
+
+    finally:
+        if container:
+            container.remove(force=True)
+        if timer.is_alive():
+            timer.cancel()
