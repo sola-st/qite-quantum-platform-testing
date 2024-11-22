@@ -1,0 +1,252 @@
+**System Information**
+- **Operating System**: Linux
+- **Operating System Version**: Ubuntu 22.04.5 LTS
+- **BQSKit Version**: 1.2.0
+
+**Expected behavior**
+
+I expect the BQSKit QASM exporter to correctly translate the input QASM circuit to an equivalent QASM, preserving the original circuit's semantics and structure.
+
+**Actual behavior**
+
+The actual behavior is that the BQSKit QASM exporter incorrectly translates the input QASM circuit and produces a circuit where the operations are misplaced. Specifically, given this circuit:
+
+```plaintext
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg reg_1_q[5];
+qreg reg_2_q[4];
+creg reg_2_c[4];
+measure reg_2_q[0] -> reg_2_c[0];
+h reg_2_q[0];
+
+# Circuit Diagram
+
+reg_1_q_0: ────────
+
+reg_1_q_1: ────────
+
+reg_1_q_2: ────────
+
+reg_1_q_3: ────────
+
+reg_1_q_4: ────────
+           ┌─┐┌───┐
+reg_2_q_0: ┤M├┤ H ├
+           └╥┘└───┘
+reg_2_q_1: ─╫──────
+            ║
+reg_2_q_2: ─╫──────
+            ║
+reg_2_q_3: ─╫──────
+            ║
+reg_2_c: 4/═╩══════
+            0
+
+```
+where the measurement operation (`measure reg_2_q[0] -> reg_2_c[0]`) is followed by a Hadamard gate (`h reg_2_q[0]`), the BQSKit QASM exporter produces the following output:
+
+```plaintext
+# PRODUCED BY THE BQSKIT QASM EXPORTER
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[9];
+creg reg_2_c[4];
+measure q[0] -> reg_2_c[0];
+h q[5];
+
+# Circuit Diagram
+           ┌─┐
+      q_0: ┤M├─────
+           └╥┘
+      q_1: ─╫──────
+            ║
+      q_2: ─╫──────
+            ║
+      q_3: ─╫──────
+            ║
+      q_4: ─╫──────
+            ║ ┌───┐
+      q_5: ─╫─┤ H ├
+            ║ └───┘
+      q_6: ─╫──────
+            ║
+      q_7: ─╫──────
+            ║
+      q_8: ─╫──────
+            ║
+reg_2_c: 4/═╩══════
+            0
+```
+Where the measurement operation and the Hadamard gate are applied to different qubits.
+
+
+**Steps to reproduce**
+
+The problem can be reproduced with the provided code snippet using only BQSKit. The issue occurs during the QASM export process, where the operations seem to be misplaced.
+
+* The initial QASM file operates on the same qubits, but the operations are misplaced in the output QASM produced by BQSKit.
+* The percentage of reproducibility is 100%, as the issue occurs consistently in the provided code snippet.
+
+The source code snippet that reproduces the issue is:
+
+```python
+from bqskit import Circuit
+import tempfile
+
+qasm_content = """
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg reg_1_q[5];
+qreg reg_2_q[4];
+creg reg_2_c[4];
+measure reg_2_q[0] -> reg_2_c[0];
+h reg_2_q[0];
+"""
+
+with tempfile.NamedTemporaryFile(delete=False, suffix=".qasm") as temp_file:
+    temp_file.write(qasm_content.encode())
+    temp_file.flush()  # Ensure the content is written to the file
+    file_path = temp_file.name
+    bqskit_circuit = Circuit.from_file(file_path)
+    print(bqskit_circuit)
+    # OUTPUT:
+    # Circuit(9)[measurement@(5,), HGate@(5,)]
+
+# QASM export
+bqskit_circuit.save("test_exported_qc_bqskit.qasm")
+# OUTPUT:
+# OPENQASM 2.0;
+# include "qelib1.inc";
+# qreg q[9];
+# creg reg_2_c[4];
+# measure q[0] -> reg_2_c[0];
+# h q[5];
+```
+
+The problem could be related to the way the BQSKit QASM exporter processes the input QASM file, either creating a corrupted internal representation (not visible when printing), or it could be a bug in the QASM export process.
+
+Let me know if you need any additional information or if you have any questions.
+Thanks in advance.
+
+
+
+
+# DRAFT
+
+Misplacing Consecutive Operations - BQSKit QASM Exporter
+
+Reading and exporting this QASM in BQSKit, we get the following circuit:
+
+**Input**
+```plaintext
+Filename:  ../reports/v009/2024_11_21__18_09/qiskit_circuit_5q_10g_5557_dc52a0_027c07_error_min_qc_qiskit.qasm
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg reg_1_q[5];
+qreg reg_2_q[4];
+creg reg_2_c[4];
+measure reg_2_q[0] -> reg_2_c[0];
+h reg_2_q[0];
+```
+
+**Output**
+```plaintext
+Filename:  ../reports/v009/2024_11_21__18_09/qiskit_circuit_5q_10g_5557_dc52a0_027c07_error_min_qc_bqskit.qasm
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[9];
+creg reg_2_c[4];
+measure q[0] -> reg_2_c[0];
+h q[5];
+```
+The semantic of the two circuits should be the same, but it is DIFFERENT as seen in the diagram below.
+
+**Qiskit Circuit /Original Input**
+```plaintext
+
+reg_1_q_0: ────────
+
+reg_1_q_1: ────────
+
+reg_1_q_2: ────────
+
+reg_1_q_3: ────────
+
+reg_1_q_4: ────────
+           ┌─┐┌───┐
+reg_2_q_0: ┤M├┤ H ├
+           └╥┘└───┘
+reg_2_q_1: ─╫──────
+            ║
+reg_2_q_2: ─╫──────
+            ║
+reg_2_q_3: ─╫──────
+            ║
+reg_2_c: 4/═╩══════
+            0
+```
+
+**BQSKit Circuit**
+```plaintext
+           ┌─┐
+      q_0: ┤M├─────
+           └╥┘
+      q_1: ─╫──────
+            ║
+      q_2: ─╫──────
+            ║
+      q_3: ─╫──────
+            ║
+      q_4: ─╫──────
+            ║ ┌───┐
+      q_5: ─╫─┤ H ├
+            ║ └───┘
+      q_6: ─╫──────
+            ║
+      q_7: ─╫──────
+            ║
+      q_8: ─╫──────
+            ║
+reg_2_c: 4/═╩══════
+            0
+```
+
+
+# Reproduction
+The problem can be reproduced with this code snippet using only BQSKit.
+The initial QASM file operates on the same qubits, but the operations are misplaced in the output QASM produced by BQSKit.
+
+```python
+from bqskit import Circuit
+import tempfile
+
+qasm_content = """
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg reg_1_q[5];
+qreg reg_2_q[4];
+creg reg_2_c[4];
+measure reg_2_q[0] -> reg_2_c[0];
+h reg_2_q[0];
+"""
+
+with tempfile.NamedTemporaryFile(delete=False, suffix=".qasm") as temp_file:
+    temp_file.write(qasm_content.encode())
+    temp_file.flush()  # Ensure the content is written to the file
+    file_path = temp_file.name
+    bqskit_circuit = Circuit.from_file(file_path)
+    print(bqskit_circuit)
+    # OUTPUT:
+    # Circuit(9)[measurement@(5,), HGate@(5,)]
+
+# QASM export
+bqskit_circ.save("test_exported_qc_bqskit.qasm")
+# OUTPUT:
+# OPENQASM 2.0;
+# include "qelib1.inc";
+# qreg q[9];
+# creg reg_2_c[4];
+# measure q[0] -> reg_2_c[0];
+# h q[5];
+```
