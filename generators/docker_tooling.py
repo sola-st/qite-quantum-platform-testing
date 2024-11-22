@@ -1,7 +1,7 @@
 
 import docker
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List
 import subprocess
 import threading
 
@@ -89,14 +89,24 @@ def run_program_in_docker_pypi(
         folder_with_file: Path,
         file_name: str,
         timeout: int = 60,
-        console=None) -> None:
+        console=None,
+        collect_coverage: bool = False,
+        packages: List[str] = ["/usr/local/lib/python3.10/site-packages/qiskit"],
+        output_folder_coverage: str = None,
+) -> None:
     """Runs the generated program in a Docker container with a timeout.
 
     It uses the pypi docker package to run the program in a container and get its container id to stop it if it times out.
     """
     client = docker.from_env()
     abs_folder = folder_with_file.resolve()
+    if collect_coverage:
+        assert output_folder_coverage is not None, "The output_folder_coverage for coverage must be provided if collect_coverage is True."
+        abs_output_folder_coverage = Path(output_folder_coverage).resolve()
+    if isinstance(packages, str):
+        packages = [packages]
     container = None
+    timer = None
 
     def stop_container():
         if container:
@@ -107,11 +117,23 @@ def run_program_in_docker_pypi(
             else:
                 print(f"Container {container.id} stopped due to timeout.")
 
+    if collect_coverage:
+        base_name = file_name.replace(".py", "")
+        command = f"python -m slipcover --json --out /workspace/coverage_output/{base_name}.json --source {','.join(packages)} python /workspace/{file_name}"
+        print(command)
+        volumes = {
+            str(abs_folder): {'bind': '/workspace', 'mode': 'rw'},
+            str(abs_output_folder_coverage): {'bind': '/workspace/coverage_output', 'mode': 'rw'}
+        }
+    else:
+        command = f"python /workspace/{file_name}"
+        volumes = {str(abs_folder): {'bind': '/workspace', 'mode': 'rw'}}
+
     try:
         container = client.containers.run(
             image='qiskit_runner',
-            command=f"python /workspace/{file_name}",
-            volumes={str(abs_folder): {'bind': '/workspace', 'mode': 'rw'}},
+            command=command,
+            volumes=volumes,
             working_dir='/workspace',
             detach=True
         )
@@ -151,5 +173,5 @@ def run_program_in_docker_pypi(
     finally:
         if container:
             container.remove(force=True)
-        if timer.is_alive():
+        if timer and timer.is_alive():
             timer.cancel()

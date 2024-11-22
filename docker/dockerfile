@@ -19,6 +19,7 @@ RUN pip install PennyLane==0.38.0 PennyLane-qiskit==0.38.0
 RUN pip install mqt.qcec==2.8.1
 RUN pip install bqskit==1.2.0
 RUN pip install pyzx==0.8.0
+RUN pip install slipcover==1.0.15
 
 # Create and set the working directory
 WORKDIR /workspace
