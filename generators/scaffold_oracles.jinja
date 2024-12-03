@@ -33,6 +33,7 @@ import traceback
 import json
 import uuid
 import sys
+import time
 import inspect
 from pathlib import Path
 from typing import List, Dict, Any, Callable, Tuple, Optional
@@ -81,7 +82,8 @@ def log_exception_to_json(
         "exception_message": str(exception),
         "stack_trace": stack_trace,
         "current_file": current_file.name,
-        "involved_functions": involved_functions
+        "involved_functions": involved_functions,
+        "timestamp": time.time(),
     }
 
     # Write the log details to a JSON file

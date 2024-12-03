@@ -58,9 +58,22 @@ def is_docker_available():
     except docker.errors.DockerException:
         return False
 
+# TODO skiptest if qiskit_runner image is not available
+
+
+def is_image_available(image_name):
+    client = docker.from_env()
+    try:
+        client.images.get(image_name)
+        return True
+    except docker.errors.ImageNotFound:
+        return False
+
 
 @pytest.mark.skipif(not is_docker_available(),
                     reason="Docker is not available")
+@pytest.mark.skipif(not is_image_available("qiskit_runner"),
+                    reason="qiskit_runner image is not available")
 def get_running_container_commands():
     """
     Retrieve the commands used to run all currently running Docker containers.
@@ -80,6 +93,8 @@ def get_running_container_commands():
 
 @pytest.mark.skipif(not is_docker_available(),
                     reason="Docker is not available")
+@pytest.mark.skipif(not is_image_available("qiskit_runner"),
+                    reason="qiskit_runner image is not available")
 def test_hello_world(hello_world_file_content):
     """
     Test that run_program_in_docker_w_timeout successfully runs a simple Python program in a Docker container.
@@ -104,6 +119,8 @@ def test_hello_world(hello_world_file_content):
 
 @pytest.mark.skipif(not is_docker_available(),
                     reason="Docker is not available")
+@pytest.mark.skipif(not is_image_available("qiskit_runner"),
+                    reason="qiskit_runner image is not available")
 def test_long_running_file(long_running_file_content):
     """
     Test that run_program_in_docker_w_timeout successfully kills the process when a long running process is run.
@@ -130,6 +147,8 @@ def test_long_running_file(long_running_file_content):
 
 @pytest.mark.skipif(not is_docker_available(),
                     reason="Docker is not available")
+@pytest.mark.skipif(not is_image_available("qiskit_runner"),
+                    reason="qiskit_runner image is not available")
 def test_qiskit_with_coverage(qiskit_file_content):
     """
     Test that run_program_in_docker_w_timeout successfully runs a Qiskit program in a Docker container and collects coverage.
@@ -176,6 +195,8 @@ def test_qiskit_with_coverage(qiskit_file_content):
 
 @pytest.mark.skipif(not is_docker_available(),
                     reason="Docker is not available")
+@pytest.mark.skipif(not is_image_available("qiskit_runner"),
+                    reason="qiskit_runner image is not available")
 def test_coverage_report_with_multiple_sources(multiple_sources):
     """
     Test that the coverage report is correctly generated when multiple sources are used.
@@ -209,4 +230,4 @@ def test_coverage_report_with_multiple_sources(multiple_sources):
         assert "qiskit/circuit" in content, "The coverage report does not contain the Qiskit source."
         assert "pennylane" in content, "The coverage report does not contain the PennyLane source."
         # print its content
-        print(content)
+        # print(content)

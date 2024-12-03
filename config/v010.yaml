@@ -1,0 +1,14 @@
+# v010: Purely Random Generator
+
+# Changelog
+# - add timestamp to each generated json file for errors
+
+commands:
+  - module: generators.morphq_like_w_oracles
+    arguments:
+      prompt: generators/scaffold_oracles.jinja
+      output_folder: program_bank/v010/
+      seed_program_folder: data/circuit_fragments
+      circuit_generation_strategy: "random"
+      max_n_programs: 10000
+      perform_execution: False

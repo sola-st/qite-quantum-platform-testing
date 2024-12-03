@@ -92,6 +92,7 @@ import docker
 from qiskit import QuantumCircuit
 from qiskit.qasm2 import load, dumps
 import pickle
+import time
 from generators.strategies.base_generation import GenerationStrategy
 from generators.strategies.iteration_v001 import SPIUKnittingGenerationStrategy
 from generators.source_code_manipulation import get_source_code_functions_w_prefix
@@ -149,7 +150,8 @@ class RandomGenerationStrategy(GenerationStrategy):
         source_code_gate_ops = "\n".join(gate_ops)
         return template.render(
             N_QUBITS=self.max_n_qubits,
-            GATE_OPS=source_code_gate_ops
+            GATE_OPS=source_code_gate_ops,
+            TIMESTAMP=str(time.time())
         )
 
 
@@ -172,7 +174,8 @@ class CircuitFragmentsGenerationStrategy(GenerationStrategy):
         circuit_template = env.get_template('circuit_qasm_embedded.jinja')
         return circuit_template.render(
             QASM_STRING=qasm_content,
-            QASM_FILENAME=selected_qasm_file.name)
+            QASM_FILENAME=selected_qasm_file.name,
+            TIMESTAMP=str(time.time()))
 
 
 class SequentialKnittingGenerationStrategy(GenerationStrategy):
@@ -203,7 +206,8 @@ class SequentialKnittingGenerationStrategy(GenerationStrategy):
         circuit_template = env.get_template('circuit_qasm_embedded.jinja')
         return circuit_template.render(
             QASM_STRING=dumps(combined_circuit),
-            QASM_FILENAME=f"combined_{sel_files[0].stem}_{sel_files[1].stem}.qasm")
+            QASM_FILENAME=f"combined_{sel_files[0].stem}_{sel_files[1].stem}.qasm",
+            TIMESTAMP=str(time.time()))
 
     def _load_circuit(self, file_path: Path) -> QuantumCircuit:
         """Load a quantum circuit from a file."""
@@ -261,25 +265,25 @@ def get_generation_strategy(
         raise ValueError(f"Unknown generation strategy: {strategy_name}")
 
 
-@click.command()
-@click.option('--output_folder', default='program_bank', type=str,
-              required=True, help="Folder to store the generated programs.")
-@click.option('--prompt', default='generators/scaffold_oracles.jinja',
-              type=Path, required=True, help="Path to the prompt template.")
-@click.option('--circuit_generation_strategy', default='random', type=str,
-              required=True, help="Strategy to generate the circuit.")
-@click.option('--max_n_qubits', default=5, type=int, required=True,
-              help="Maximum number of qubits in the circuit.")
-@click.option('--max_n_gates', default=10, type=int, required=True,
-              help="Maximum number of gates in the circuit.")
-@click.option('--max_n_programs', default=10, type=int, required=True,
-              help="Maximum number of programs to generate.")
-@click.option('--perform_execution', is_flag=True, default=False,
-              help="Flag to indicate whether to perform execution.")
-@click.option('--seed', default=None, type=int,
-              help="Seed for random reproducible generation (debug).")
-@click.option('--seed_program_folder', default=None, type=Path,
-              help="Optional folder containing QASM/pkl files for seeding.")
+@ click.command()
+@ click.option('--output_folder', default='program_bank', type=str,
+               required=True, help="Folder to store the generated programs.")
+@ click.option('--prompt', default='generators/scaffold_oracles.jinja',
+               type=Path, required=True, help="Path to the prompt template.")
+@ click.option('--circuit_generation_strategy', default='random', type=str,
+               required=True, help="Strategy to generate the circuit.")
+@ click.option('--max_n_qubits', default=5, type=int, required=True,
+               help="Maximum number of qubits in the circuit.")
+@ click.option('--max_n_gates', default=10, type=int, required=True,
+               help="Maximum number of gates in the circuit.")
+@ click.option('--max_n_programs', default=10, type=int, required=True,
+               help="Maximum number of programs to generate.")
+@ click.option('--perform_execution', is_flag=True, default=False,
+               help="Flag to indicate whether to perform execution.")
+@ click.option('--seed', default=None, type=int,
+               help="Seed for random reproducible generation (debug).")
+@ click.option('--seed_program_folder', default=None, type=Path,
+               help="Optional folder containing QASM/pkl files for seeding.")
 def main(
         output_folder: str, prompt: Path, circuit_generation_strategy: str,
         max_n_qubits: int, max_n_gates: int, max_n_programs: int,

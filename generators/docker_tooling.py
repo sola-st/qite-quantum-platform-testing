@@ -119,7 +119,7 @@ def run_program_in_docker_pypi(
 
     if collect_coverage:
         base_name = file_name.replace(".py", "")
-        command = f"python -m slipcover --json --out /workspace/coverage_output/{base_name}.json --source {','.join(packages)} python /workspace/{file_name}"
+        command = f"python -m slipcover --json --out /workspace/coverage_output/{base_name}.json --source {','.join(packages)} -m pytest /workspace/{file_name}"
         print(command)
         volumes = {
             str(abs_folder): {'bind': '/workspace', 'mode': 'rw'},
