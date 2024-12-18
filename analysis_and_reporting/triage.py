@@ -1,5 +1,6 @@
 import click
 import shutil
+from typing import List, Dict, Any, Tuple, Optional
 from pathlib import Path
 from datetime import datetime
 from rich.console import Console
@@ -140,6 +141,49 @@ def copy_files_to_report_folder(error_json_path: Path, program_path: Path,
     console.log(f"Copied files to: {report_folder_path}")
 
 
+def extract_circuit_variable_name(program_path: Path) -> str:
+    """Extract the name of the circuit variable from the qasm file path.
+
+    Examples:
+    - qiskit_circuit_5q_10g_7553_24d42f_76b26a_error_min_qc_qiskit.qasm
+    >> qc
+    - qiskit_circuit_5q_10g_7553_24d42f_76b26a_error_min_random_qc_pytket.qasm
+    >> random_qc
+    """
+    # remove up to error_min_
+    assert "error_min_" in str(
+        program_path), f"error_min_ not found in {program_path}. You must provide a path with error_min_"
+    program_path = str(program_path)
+    start = program_path.find('error_min_') + 10
+    program_path = program_path[start:]
+    # remove the last platform name
+    end = program_path.rfind('_')
+    if end == -1:
+        return ""
+    program_path = program_path[:end]
+    return program_path
+
+
+def get_qasm_pairs(report_folder_path: Path) -> List[Tuple[str, str]]:
+    """Get the pairs of qasm files in the report folder that refer to the same
+    circuit variable."""
+    qasm_files = list(report_folder_path.glob('*.qasm'))
+    qasm_pairs = []
+    while qasm_files:
+        qasm_a = qasm_files.pop()
+        qasm_a_name = extract_circuit_variable_name(qasm_a)
+        qasm_b = None
+        for qasm_file in qasm_files:
+            qasm_b_name = extract_circuit_variable_name(qasm_file)
+            if qasm_a_name == qasm_b_name:
+                qasm_b = qasm_file
+                qasm_files.remove(qasm_file)
+                break
+        if qasm_b:
+            qasm_pairs.append((str(qasm_a), str(qasm_b)))
+    return qasm_pairs
+
+
 def run_analysis_ipynb_on_minimized_program(
         minimized_program_path: Path, report_folder_path: Path,
         analysis_notebook: Path) -> None:
@@ -149,20 +193,29 @@ def run_analysis_ipynb_on_minimized_program(
         console.log("No QASM files found.")
         return
 
-    parameters = {
-        'PATH_QASM_A': str(qasm_files[0]) if len(qasm_files) > 0 else None,
-        'PATH_QASM_B': str(qasm_files[1]) if len(qasm_files) > 1 else None,
-        'PATH_PYTHON_FILE': str(minimized_program_path)}
+    qasm_pairs = get_qasm_pairs(report_folder_path)
 
-    output_notebook = report_folder_path / 'analysis_output.ipynb'
-    try:
-        pm.execute_notebook(
-            input_path=str(analysis_notebook),
-            output_path=str(output_notebook),
-            parameters=parameters)
-        console.log(f"Analysis notebook executed: {output_notebook}")
-    except Exception as e:
-        console.log(f"Error executing analysis notebook: {e}")
+    for qasm_pair in qasm_pairs:
+        console.log(f"QASM pair: {qasm_pair}")
+        qasm_a = qasm_pair[0]
+        qasm_b = qasm_pair[1]
+        variable_name = extract_circuit_variable_name(qasm_a)
+
+        parameters = {
+            'PATH_QASM_A': qasm_a,
+            'PATH_QASM_B': qasm_b,
+            'PATH_PYTHON_FILE': str(minimized_program_path)}
+
+        output_notebook = report_folder_path / \
+            f'analysis_output_{variable_name}.ipynb'
+        try:
+            pm.execute_notebook(
+                input_path=str(analysis_notebook),
+                output_path=str(output_notebook),
+                parameters=parameters)
+            console.log(f"Analysis notebook executed: {output_notebook}")
+        except Exception as e:
+            console.log(f"Error executing analysis notebook: {e}")
 
 
 if __name__ == '__main__':
