@@ -95,6 +95,7 @@ import pickle
 import time
 from generators.strategies.base_generation import GenerationStrategy
 from generators.strategies.iteration_v001 import SPIUKnittingGenerationStrategy
+from generators.strategies.llm_generator import LLMGenerationStrategy
 from generators.source_code_manipulation import get_source_code_functions_w_prefix
 from abc import ABC, abstractmethod
 import validate.functions_qasm_export as export_functions
@@ -261,6 +262,10 @@ def get_generation_strategy(
             seed_programs_folder=kwargs['seed_program_folder'],
             program_extensions=kwargs.get(
                 'program_extensions', [".qasm", ".pkl"]))
+    elif strategy_name == 'llm_generation':
+        return LLMGenerationStrategy(
+            path_to_documentation=kwargs['path_to_documentation'],
+        )
     else:
         raise ValueError(f"Unknown generation strategy: {strategy_name}")
 
@@ -284,11 +289,14 @@ def get_generation_strategy(
                help="Seed for random reproducible generation (debug).")
 @ click.option('--seed_program_folder', default=None, type=Path,
                help="Optional folder containing QASM/pkl files for seeding.")
+@ click.option('--path_to_documentation', default=None, type=Path,
+               help="Path to the documentation file for LLM generation.")
 def main(
         output_folder: str, prompt: Path, circuit_generation_strategy: str,
         max_n_qubits: int, max_n_gates: int, max_n_programs: int,
         perform_execution: bool, seed: Optional[int],
-        seed_program_folder: Optional[Path]):
+        seed_program_folder: Optional[Path],
+        path_to_documentation: Optional[Path]):
     """
     CLI to generate Qiskit programs based on a MorphQ template and save them to files.
     """
@@ -315,6 +323,7 @@ def main(
             max_n_qubits=max_n_qubits,
             max_n_gates=max_n_gates,
             seed_program_folder=seed_program_folder,
+            path_to_documentation=path_to_documentation
         )
         qc_circuit_source = generation_strategy.generate()
 

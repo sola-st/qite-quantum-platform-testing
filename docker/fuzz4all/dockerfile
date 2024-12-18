@@ -1,0 +1,36 @@
+# Use the slimmest possible Python 3.10 image
+FROM python:3.10-slim
+
+# Set the working directory
+ARG UID=1000
+ARG GID=1000
+
+RUN groupadd -g $GID regularuser && \
+    useradd -m -u $UID -g $GID -s /bin/bash regularuser
+
+WORKDIR /app
+RUN chown -R regularuser /app
+
+# Install git
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# Clone the fuzz4all repository
+RUN git clone https://github.com/fuzz4all/fuzz4all.git .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -e .
+
+# Set environment variables
+ENV FUZZING_BATCH_SIZE=30
+ENV FUZZING_MODEL="bigcode/starcoderbase"
+ENV FUZZING_DEVICE="gpu"
+
+# Expose any necessary ports (if applicable)
+# EXPOSE 8080
+# Copy the openai_token.txt file and set its content as an environment variable
+COPY openai_token.txt /app/openai_token.txt
+RUN export OPENAI_API_KEY=$(cat /app/openai_token.txt)
+
+# Command to run the application (adjust as needed)
+CMD ["python", "Fuzz4All/fuzz.py", "--config", "configs/default_config.yaml", "main_with_config", "--folder", "outputs/fuzzing_outputs", "--batch_size", "30", "--model_name", "bigcode/starcoderbase", "--target", "target_name"]
