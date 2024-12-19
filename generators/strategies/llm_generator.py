@@ -36,7 +36,10 @@ from pathlib import Path
 from generators.strategies.base_generation import GenerationStrategy
 from groq import GroqError
 
-os.environ["GROQ_API_KEY"] = Path("groq_token.txt").read_text().strip()
+# check if the GROQ_API_KEY is set
+if "GROQ_API_KEY" not in os.environ:
+    os.environ["GROQ_API_KEY"] = Path("groq_token.txt").read_text().strip()
+
 # lm = dspy.LM('groq/gemma-7b-it')
 lm = dspy.LM('groq/llama-3.3-70b-versatile')
 
