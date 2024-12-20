@@ -118,15 +118,16 @@ def run_program_in_docker_pypi(
                 print(f"Container {container.id} stopped due to timeout.")
 
     if collect_coverage:
-        report_name = file_name.replace(".py", "")
-        command = f"python -m slipcover --json --out /workspace/coverage_output/{report_name}.json --source {','.join(packages)} {file_name}"
+        base_name = file_name.replace(".py", "")
+        command = f"python -m slipcover --json --out /workspace/coverage_output/{base_name}.json --source {','.join(packages)} -m {base_name}"
         print(command)
         volumes = {
             str(abs_folder): {'bind': '/workspace', 'mode': 'rw'},
             str(abs_output_folder_coverage): {'bind': '/workspace/coverage_output', 'mode': 'rw'}
         }
     else:
-        command = f"python {file_name}"
+        base_name = file_name.replace(".py", "")
+        command = f"python -m {base_name}"
         volumes = {str(abs_folder): {'bind': '/workspace', 'mode': 'rw'}}
 
     try:

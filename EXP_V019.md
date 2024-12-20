@@ -33,7 +33,7 @@ LLM generated programs
 
 To run in parallel with 4 processes use the following command:
 ```bash
-python -m analysis_and_reporting.coverage_computation --input_folder program_bank/v012/2024_12_16__23_03__qiskit --output_folder data/coverage/v012_four_platforms --packages /usr/local/lib/python3.10/site-packages/qiskit --packages /usr/local/lib/python3.10/site-packages/pennylane --packages /usr/local/lib/python3.10/site-packages/bqskit --packages /usr/local/lib/python3.10/site-packages/pytket --timeout 30 --number_of_programs 1000 --n_processes 4
+python -m analysis_and_reporting.coverage_computation --input_folder program_bank/v012/2024_12_16__23_03__qiskit --output_folder data/coverage/v012_four_platforms_parallel --packages /usr/local/lib/python3.10/site-packages/qiskit --packages /usr/local/lib/python3.10/site-packages/pennylane --packages /usr/local/lib/python3.10/site-packages/bqskit --packages /usr/local/lib/python3.10/site-packages/pytket --timeout 30 --number_of_programs 1000 --n_processes 4
 ```
 
 
@@ -50,6 +50,16 @@ screen -S coverage_v011_spiu python -m analysis_and_reporting.coverage_computati
 ```
 
 
+# Test suite
+To run the test suite use the following command:
+```bash
+# folder program_bank/v013/2024_12_20__11_48__qiskit
+screen -S coverage_v013_test_only python -m analysis_and_reporting.coverage_computation --input_folder program_bank/v013/2024_12_20__11_48__qiskit --output_folder data/coverage/v013_four_platform --packages /usr/local/lib/python3.10/site-packages/qiskit --packages /usr/local/lib/python3.10/site-packages/pennylane --packages /usr/local/lib/python3.10/site-packages/bqskit --packages /usr/local/lib/python3.10/site-packages/pytket  --timeout 30 --number_of_programs 1000 --n_processes 4
+```
+
+
+
+
 # Fast Coverage Computation
 
 To run a faster coverage computation we use the following observations:
@@ -59,6 +69,17 @@ To run a faster coverage computation we use the following observations:
 
 To use slipcover to consider multiple files useL
 ```bash
-python -m slipcover --json --out import_qiskit.json --source /home/paltenmo/.conda/envs/crosspl/lib/python3.10/site-packages/qiskit,/home/paltenmo/.conda/envs/crosspl/lib/python3.10/site-packages/pennylane -m pytest import_qiskit.py import_pennylane.py
+python -m slipcover --json --out import_qiskit.json --source /home/paltenmo/.conda/envs/crosspl/lib/python3.10/site-packages/qiskit,/home/paltenmo/.conda/envs/crosspl/lib/python3.10/site-packages/pytket -m pytest import_qiskit.py import_pennylane.py
 # NOT WORKING: not possible
+```
+
+## Debugging: Empty Coverage for Some Platforms
+Problem: some platforms have zero line covered, although some QASM files are generating when running them, so I suppose some platform code is actually run.
+Hypothesis: the coverage computation is not working properly, maybe because of slipcover bug.
+Manual debug: run slipcover locally and check the output.
+```bash
+# go to the folder with the file
+cd data/coverage/manual_debug/
+# run on pytket and qiskit
+python -m slipcover --json --out qiskit_circuit_5q_10g_10_9e7bb7_MANUAL.json --source /home/paltenmo/.conda/envs/crosspl/lib/python3.10/site-packages/qiskit,/home/paltenmo/.conda/envs/crosspl/lib/python3.10/site-packages/pytket  qiskit_circuit_5q_10g_10_9e7bb7.py
 ```

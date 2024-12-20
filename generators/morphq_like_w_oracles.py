@@ -96,6 +96,9 @@ import time
 from generators.strategies.base_generation import GenerationStrategy
 from generators.strategies.iteration_v001 import SPIUKnittingGenerationStrategy
 from generators.strategies.llm_generator import LLMGenerationStrategy
+from generators.strategies.fixed_files_generator import (
+    TestSuiteOnlyGenerationStrategy
+)
 from generators.source_code_manipulation import get_source_code_functions_w_prefix
 from abc import ABC, abstractmethod
 import validate.functions_qasm_export as export_functions
@@ -243,7 +246,11 @@ def save_program_to_file(
 def get_generation_strategy(
         strategy_name: str, **kwargs) -> GenerationStrategy:
     """Returns the appropriate generation strategy object based on the strategy name."""
-    if strategy_name == 'random':
+    if strategy_name == 'test_suite_only':
+        return TestSuiteOnlyGenerationStrategy(
+            seed_programs_folder=kwargs['seed_program_folder']
+        )
+    elif strategy_name == 'random':
         return RandomGenerationStrategy(
             max_n_qubits=kwargs['max_n_qubits'],
             max_n_gates=kwargs['max_n_gates']
@@ -316,15 +323,15 @@ def main(
     # Load the Jinja template
     template = load_jinja_template(template_path=prompt)
 
+    # Generate the circuit code
+    generation_strategy = get_generation_strategy(
+        strategy_name=circuit_generation_strategy,
+        max_n_qubits=max_n_qubits,
+        max_n_gates=max_n_gates,
+        seed_program_folder=seed_program_folder,
+        path_to_documentation=path_to_documentation
+    )
     for i in range(max_n_programs):
-        # Generate the circuit code
-        generation_strategy = get_generation_strategy(
-            strategy_name=circuit_generation_strategy,
-            max_n_qubits=max_n_qubits,
-            max_n_gates=max_n_gates,
-            seed_program_folder=seed_program_folder,
-            path_to_documentation=path_to_documentation
-        )
         qc_circuit_source = generation_strategy.generate()
 
         # get export functions
