@@ -5,6 +5,7 @@ import click
 from pathlib import Path
 from typing import List
 import shutil
+import multiprocessing
 from rich.console import Console
 from generators.docker_tooling import run_program_in_docker_pypi
 
@@ -85,11 +86,15 @@ def create_tmp_folder(output_path: Path) -> Path:
 
 def compute_coverage(
         input_folder: str, output_folder: str, packages: List[str],
-        timeout: int, number_of_programs: int) -> None:
+        timeout: int, number_of_programs: int, process_id: int = 0, console=None) -> None:
     """Compute the coverage of the generated programs.
 
     Make sure to copy them to a temporary folder.
     """
+    if console is None:
+        process_id_file = Path(output_folder) / f"process_{process_id}.log"
+        f = open(process_id_file, "w")
+        console = Console(file=f, force_terminal=True)
     console.log(
         f"Starting coverage computation for {number_of_programs} programs.")
     input_path = Path(input_folder)
@@ -140,6 +145,60 @@ def compute_coverage(
         f"Coverage computation completed. Reports saved in {output_path}")
 
 
+def create_subfolder_per_process(
+        output_path: Path, n_processes: int) -> List[Path]:
+    """Create a subfolder for each process."""
+    subfolders = [output_path / f"process_{i}" for i in range(n_processes)]
+    for subfolder in subfolders:
+        subfolder.mkdir(parents=True, exist_ok=True)
+    return subfolders
+
+
+def allocate_programs_to_processes(
+        programs: List[Path], n_processes: int) -> List[List[Path]]:
+    """Allocate the programs to the processes."""
+    programs_per_process = [[] for _ in range(n_processes)]
+    for i, program in enumerate(programs):
+        programs_per_process[i % n_processes].append(program)
+    return programs_per_process
+
+
+def remove_comparison_oracle(
+        target_program: Path,
+        line_to_remove: str = "compare_call(a_file, b_file)",
+        line_to_replace: str = "pass") -> List[Path]:
+    """Replace a specific line in the program with pass.
+    The line is given without a starting empty space, however the occurrence
+    in the program might start with a certain number of spaces.
+    The goal is to replace it with pass, while keeping the same indentation.
+    """
+    lines = target_program.read_text().split("\n")
+    new_lines = []
+    for line in lines:
+        if line.strip() == line_to_remove:
+            new_lines.append(line.replace(line_to_remove, line_to_replace))
+        else:
+            new_lines.append(line)
+    target_program.write_text("\n".join(new_lines))
+
+
+def copy_programs_to_process_folders(
+        programs_per_process: List[List[Path]],
+        subfolders: List[Path],
+        do_remove_comparison_oracle: bool = True
+) -> None:
+    """Copy the programs to the subfolders."""
+    for i, programs in enumerate(programs_per_process):
+        for program in programs:
+            tmp_file_path = subfolders[i] / program.name
+            shutil.copy(program, tmp_file_path)
+            if do_remove_comparison_oracle:
+                remove_comparison_oracle(
+                    target_program=tmp_file_path,
+                    line_to_remove="compare_call(a_file, b_file)",
+                    line_to_replace="pass")
+
+
 @click.command()
 @click.option('--input_folder', required=True, type=str,
               help='The folder containing the programs to be analyzed')
@@ -151,16 +210,47 @@ def compute_coverage(
               help='The timeout for each program in seconds')
 @click.option('--number_of_programs', default=10, type=int,
               help='The number of programs to be analyzed')
+@click.option('--n_processes', default=1, type=int,
+              help='The number of processes to run in parallel')
 def main(
         input_folder: str, output_folder: str, packages: List[str],
-        timeout: int, number_of_programs: int) -> None:
-    compute_coverage(
-        input_folder=input_folder,
-        output_folder=output_folder,
-        packages=list(packages),
-        timeout=timeout,
-        number_of_programs=number_of_programs
-    )
+        timeout: int, number_of_programs: int, n_processes: int) -> None:
+
+    all_programs = [
+        program for program in Path(input_folder).glob("*.py")
+    ]
+
+    output_path = Path(output_folder)
+    subfolders = create_subfolder_per_process(output_path, n_processes)
+    programs_per_process = allocate_programs_to_processes(
+        programs=all_programs, n_processes=n_processes)
+    copy_programs_to_process_folders(
+        programs_per_process=programs_per_process, subfolders=subfolders)
+
+    processes = []
+    for i, programs in enumerate(programs_per_process):
+        process = multiprocessing.Process(
+            target=compute_coverage,
+            kwargs={
+                'input_folder': str(subfolders[i]),
+                'output_folder': str(subfolders[i]),
+                'packages': list(packages),
+                'timeout': timeout,
+                'number_of_programs': min(
+                    len(programs), number_of_programs // n_processes),
+                'process_id': i,
+            }
+        )
+        process.start()
+        processes.append(process)
+
+    for process in processes:
+        process.join()
+
+    # remove all python files in the subfolders
+    for subfolder in subfolders:
+        for file in subfolder.glob("*.py"):
+            file.unlink()
 
 
 if __name__ == '__main__':
