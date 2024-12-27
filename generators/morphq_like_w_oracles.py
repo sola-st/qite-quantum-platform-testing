@@ -95,9 +95,15 @@ import pickle
 import time
 from generators.strategies.base_generation import GenerationStrategy
 from generators.strategies.iteration_v001 import SPIUKnittingGenerationStrategy
-from generators.strategies.llm_generator import LLMGenerationStrategy
+from generators.strategies.llm_generator import (
+    LLMGenerationStrategy,
+    LLMMultiCircuitsGenerationStrategy
+)
 from generators.strategies.fixed_files_generator import (
     TestSuiteOnlyGenerationStrategy
+)
+from generators.strategies.llm_generation_variations_A import (
+    LLMGenerationStrategy001
 )
 from generators.source_code_manipulation import get_source_code_functions_w_prefix
 from abc import ABC, abstractmethod
@@ -273,6 +279,12 @@ def get_generation_strategy(
         return LLMGenerationStrategy(
             path_to_documentation=kwargs['path_to_documentation'],
         )
+    elif strategy_name == 'llm_generation_001':
+        return LLMGenerationStrategy001(
+            path_to_documentation=kwargs['path_to_documentation'],
+        )
+    elif strategy_name == 'llm_multi_circuits_generation':
+        return LLMMultiCircuitsGenerationStrategy()
     else:
         raise ValueError(f"Unknown generation strategy: {strategy_name}")
 

@@ -35,13 +35,16 @@ import random
 from pathlib import Path
 from generators.strategies.base_generation import GenerationStrategy
 from groq import GroqError
+from typing import List, Dict, Any
+
 
 # check if the GROQ_API_KEY is set
 if "GROQ_API_KEY" not in os.environ:
     os.environ["GROQ_API_KEY"] = Path("groq_token.txt").read_text().strip()
 
 # lm = dspy.LM('groq/gemma-7b-it')
-lm = dspy.LM('groq/llama-3.3-70b-versatile')
+# lm = dspy.LM('groq/llama-3.3-70b-versatile')
+lm = dspy.LM('groq/llama-3.1-70b-versatile')
 
 
 class GenerateQuantumCircuit(dspy.Signature):
@@ -142,3 +145,59 @@ class LLMGenerationStrategy(GenerationStrategy):
         python_code = self._clean_tags(python_code)
         python_code = self._surround_imports_with_try_except(python_code)
         return python_code
+
+
+class GenerateMultipleCircuit(dspy.Signature):
+    """Generate multiple quantum circuits in Qiskit.
+
+    Each circuit:
+    - has enough classical bits to measure all qubits
+    - has unusual gates
+    - registers are referenced with the number only
+    - includes intermediate measurements
+    - is valid Qiskit python code (statements end with a newline)
+
+    The circuits must have only circuit objects and no execution or transpilation."""
+    n_circuits: int = dspy.InputField(
+        desc="The number of circuits to generate")
+    max_qubits: int = dspy.InputField(
+        desc="The maximum number of qubits to use in each circuit")
+    n_ops_per_circuit: int = dspy.InputField(
+        desc="The number of operations to include in each circuit")
+    circuits: List[str] = dspy.OutputField()
+
+
+class GenerateMultipleCircuits(dspy.Module):
+    def __init__(self):
+        self.prog = dspy.ChainOfThought(
+            GenerateMultipleCircuit, temperature=1)
+
+    def forward(self, n_circuits: int, max_qubits: int, n_ops_per_circuit: int) -> Dict[str, Any]:
+        results = self.prog(n_circuits=n_circuits,
+                            max_qubits=max_qubits,
+                            n_ops_per_circuit=n_ops_per_circuit)
+        return results
+
+
+class LLMMultiCircuitsGenerationStrategy(GenerationStrategy):
+    """It generates multiple Qiskit circuits using the LLM model."""
+
+    def __init__(self, *args, **kwargs):
+        dspy.configure(lm=lm)
+        self.generator = GenerateMultipleCircuits()
+        self.precomputed_circuits = []
+
+    def generate(self) -> List[str]:
+        """Generates multiple Qiskit circuits using the LLM model."""
+        if not self.precomputed_circuits:
+            try:
+                self.precomputed_circuits = self.generator(
+                    n_circuits=random.randint(3, 10),
+                    max_qubits=random.randint(3, 7),
+                    n_ops_per_circuit=random.randint(20, 40))["circuits"]
+            except Exception as e:
+                print(f"Error: {e}")
+                print("Waiting for 60 seconds before retrying ...")
+                time.sleep(60)
+                return self.generate()
+        return self.precomputed_circuits.pop(0)
