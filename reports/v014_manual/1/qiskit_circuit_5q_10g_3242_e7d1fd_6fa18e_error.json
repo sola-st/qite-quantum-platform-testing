@@ -1,0 +1,9 @@
+{
+    "exception_message": "Invalid register name '4'. QASM register names must begin with a lowercase letter and may only contain lowercase and uppercase letters, numbers, and underscores. Try renaming the register with `rename_units` first.",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/qiskit_circuit_5q_10g_3242_e7d1fd.py\", line 277, in <module>\n    qasm_file = export_call(\n  File \"/workspace/qiskit_circuit_5q_10g_3242_e7d1fd.py\", line 168, in export_to_qasm_with_pytket\n    qasm_str_tket = circuit_to_qasm_str(\n  File \"/usr/local/lib/python3.10/site-packages/pytket/qasm/qasm.py\", line 1115, in circuit_to_qasm_str\n    qasm_writer = QasmWriter(\n  File \"/usr/local/lib/python3.10/site-packages/pytket/qasm/qasm.py\", line 1380, in __init__\n    raise QASMUnsupportedError(\npytket.qasm.qasm.QASMUnsupportedError: Invalid register name '4'. QASM register names must begin with a lowercase letter and may only contain lowercase and uppercase letters, numbers, and underscores. Try renaming the register with `rename_units` first.\n",
+    "current_file": "qiskit_circuit_5q_10g_3242_e7d1fd.py",
+    "involved_functions": [
+        "export_to_qasm_with_pytket"
+    ],
+    "timestamp": 1735409740.94003
+}
