@@ -110,6 +110,7 @@ from abc import ABC, abstractmethod
 import validate.functions_qasm_export as export_functions
 import validate.functions_qasm_import as import_functions
 import validate.functions_qasm_compare as compare_functions
+import validate.functions_optimize as optimize_functions
 
 from generators.combine_circuits import combine_circuits
 
@@ -354,6 +355,10 @@ def main(
         import_functions_section = get_source_code_functions_w_prefix(
             prefix='import_from_qasm_with_', module=import_functions)
 
+        # get optimize functions
+        optimize_functions_section = get_source_code_functions_w_prefix(
+            prefix='optimize_with_', module=optimize_functions)
+
         # get compare functions
         compare_functions_section = get_source_code_functions_w_prefix(
             prefix='compare_', module=compare_functions)
@@ -363,6 +368,7 @@ def main(
             QC_CIRCUIT_CODE=qc_circuit_source,
             FUNCTIONS_EXPORT_TO_QASM=export_functions_section,
             FUNCTION_IMPORT_FROM_QASM=import_functions_section,
+            FUNCTIONS_OPTIMIZE=optimize_functions_section,
             FUNCTIONS_COMPARE=compare_functions_section,
             TARGET_QC='qc',
             PERFORM_EXECUTION=perform_execution
