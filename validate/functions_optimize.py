@@ -146,50 +146,50 @@ def optimize_with_pennylane(
     print(f"Saved the PennyLane circuit to {file_path_pennylane}")
 
 
-def optimize_with_bqskit(
-        bqqc, var_name: str,
-        output_dir: Optional[str] = None):
-    """Optimize a BQSKit circuit and export as qasm."""
-    from bqskit.passes import (
-        QuickPartitioner, ScanningGateRemovalPass, UnfoldPass,
-    )
-    from bqskit.compiler import (
-        Workflow, Compiler
-    )
-    from bqskit import compile
-    # from bqskit.passes import (
-    #     QuickPartitioner, ForEachBlockPass,
-    #     ScanningGateRemovalPass, UnfoldPass,
-    #     ExhaustiveGateRemovalPass,
-    #     IterativeScanningGateRemovalPass,
-    #     TreeScanningGateRemovalPass
-    # )
+# def optimize_with_bqskit(
+#         bqqc, var_name: str,
+#         output_dir: Optional[str] = None):
+#     """Optimize a BQSKit circuit and export as qasm."""
+#     from bqskit.passes import (
+#         QuickPartitioner, ScanningGateRemovalPass, UnfoldPass,
+#     )
+#     from bqskit.compiler import (
+#         Workflow, Compiler
+#     )
+#     from bqskit import compile
+#     # from bqskit.passes import (
+#     #     QuickPartitioner, ForEachBlockPass,
+#     #     ScanningGateRemovalPass, UnfoldPass,
+#     #     ExhaustiveGateRemovalPass,
+#     #     IterativeScanningGateRemovalPass,
+#     #     TreeScanningGateRemovalPass
+#     # )
 
-    # workflows = [
-    #     Workflow([
-    #         QuickPartitioner(3),  # Partition into 3-qubit blocks
-    #         # Apply gate deletion to each block (in parallel)
-    #         ForEachBlockPass(ScanningGateRemovalPass()),
-    #         UnfoldPass(),  # Unfold the blocks back into the original circuit
-    #     ]),
-    # ]
-    opt_bqqc = compile(bqqc, max_synthesis_size=5)
-    # with Compiler() as compiler:
-    # example of using specific workflow
-    # opt_bqqc = compiler.compile(bqqc, workflow=workflows[0])
+#     # workflows = [
+#     #     Workflow([
+#     #         QuickPartitioner(3),  # Partition into 3-qubit blocks
+#     #         # Apply gate deletion to each block (in parallel)
+#     #         ForEachBlockPass(ScanningGateRemovalPass()),
+#     #         UnfoldPass(),  # Unfold the blocks back into the original circuit
+#     #     ]),
+#     # ]
+#     opt_bqqc = compile(bqqc, max_synthesis_size=5)
+#     # with Compiler() as compiler:
+#     # example of using specific workflow
+#     # opt_bqqc = compiler.compile(bqqc, workflow=workflows[0])
 
-    # Determine file path
-    if output_dir is not None:
-        file_path_bqskit = Path(
-            output_dir) / f"{var_name}_optimized_bqskit.qasm"
-    else:
-        current_file = Path(__file__)
-        file_stem = current_file.stem
-        file_path_bqskit = current_file.with_name(
-            f"{file_stem}_{var_name}_optimized_bqskit.qasm")
+#     # Determine file path
+#     if output_dir is not None:
+#         file_path_bqskit = Path(
+#             output_dir) / f"{var_name}_optimized_bqskit.qasm"
+#     else:
+#         current_file = Path(__file__)
+#         file_stem = current_file.stem
+#         file_path_bqskit = current_file.with_name(
+#             f"{file_stem}_{var_name}_optimized_bqskit.qasm")
 
-    # Save BQSKit circuit to QASM
-    opt_bqqc.save(str(file_path_bqskit))
+#     # Save BQSKit circuit to QASM
+#     opt_bqqc.save(str(file_path_bqskit))
 
-    print(
-        f"Saved Optimized BQSKit circuit to {file_path_bqskit}")
+#     print(
+#         f"Saved Optimized BQSKit circuit to {file_path_bqskit}")

@@ -94,7 +94,7 @@ def compute_coverage(
     if console is None:
         process_id_file = Path(output_folder) / f"process_{process_id}.log"
         f = open(process_id_file, "w")
-        console = Console(file=f, force_terminal=True)
+        console = Console(file=f, force_terminal=True, color_system=None)
     console.log(
         f"Starting coverage computation for {number_of_programs} programs.")
     input_path = Path(input_folder)

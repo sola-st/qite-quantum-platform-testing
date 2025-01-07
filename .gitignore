@@ -2,6 +2,7 @@
 # secrets
 groq_token.txt
 openai_token.txt
+gemini_token.txt
 
 # data folders
 deprecated_apis/*
@@ -24,3 +25,8 @@ log.txt
 
 # temporary firectory
 .tmp/*
+
+reports/v008/*
+reports/v009/*
+
+experiments/*

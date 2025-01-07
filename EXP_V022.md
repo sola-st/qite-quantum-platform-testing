@@ -24,5 +24,5 @@ Invalid register name "4" when exporting with Pytket > crash
 To compute the coverage use the following command:
 
 ```bash
-python -m analysis_and_reporting.coverage_computation --input_folder program_bank/v014/2024_12_27__00_01__qiskit --output_folder data/coverage/v014_four_platforms --packages /usr/local/lib/python3.10/site-packages/qiskit --packages /usr/local/lib/python3.10/site-packages/pennylane --packages /usr/local/lib/python3.10/site-packages/bqskit --packages /usr/local/lib/python3.10/site-packages/pytket --timeout 30 --number_of_programs 3
+screen -S coverage_v014_session python -m analysis_and_reporting.coverage_computation --input_folder program_bank/v014/2024_12_27__00_01__qiskit --output_folder data/coverage/v014_four_platforms --packages /usr/local/lib/python3.10/site-packages/qiskit --packages /usr/local/lib/python3.10/site-packages/pennylane --packages /usr/local/lib/python3.10/site-packages/bqskit --packages /usr/local/lib/python3.10/site-packages/pytket --timeout 30 --number_of_programs 10000 --n_processes 4
 ```

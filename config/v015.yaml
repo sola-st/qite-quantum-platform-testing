@@ -1,7 +1,8 @@
-# v015: Random with Cross-Optimization Oracles
+# v015: Random with Cross-Optimization Oracles (bqskit disabled)
 
 # Changelog
 # - Add cross-optimization oracles
+# - Disable bqskit optimization because it hangs.
 
 commands:
   - module: generators.morphq_like_w_oracles
@@ -9,9 +10,9 @@ commands:
       prompt: generators/scaffold_multiple_oracles.jinja
       output_folder: program_bank/v015/
       circuit_generation_strategy: "random"
-      max_n_qubits: 15
-      max_n_gates: 30
-      max_n_programs: 10000
+      max_n_qubits: 11
+      max_n_gates: 5
+      max_n_programs: 30
       perform_execution: False
 
       # path_to_documentation: generators/strategies/docs_artifacts/qiskit_std.md
