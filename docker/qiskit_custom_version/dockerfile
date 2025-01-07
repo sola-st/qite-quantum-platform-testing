@@ -1,0 +1,34 @@
+# Use the slim Python 3.10 image
+FROM python:3.10-slim
+
+ARG UID=1000
+ARG GID=1000
+ARG QISKIT_VERSION=0.45.0
+
+RUN groupadd -g $GID regularuser && \
+    useradd -m -u $UID -g $GID -s /bin/bash regularuser
+
+# Set environment variable to avoid issues with pip and locales
+ENV PYTHONUNBUFFERED=1
+ENV LANG=C.UTF-8
+RUN apt-get update -y && apt-get install -y graphviz
+RUN pip install slipcover==1.0.15
+RUN pip install pytest==8.3.3
+RUN pip install matplotlib
+RUN pip install graphviz
+
+RUN if [ "${QISKIT_VERSION%%.*}" = "1" ]; then \
+    pip install --no-cache-dir qiskit==$QISKIT_VERSION qiskit-aer qiskit-ibm-runtime; \
+    else \
+    pip install --no-cache-dir qiskit==$QISKIT_VERSION qiskit-aer; \
+    fi
+
+# Create and set the working directory
+WORKDIR /workspace
+# change the owner of the working directory
+RUN chown -R regularuser /workspace
+
+USER regularuser
+
+# Set the default command to run the Python script
+CMD ["python", "-c", "import qiskit; print(qiskit.__version__)"]
