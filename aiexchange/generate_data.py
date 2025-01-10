@@ -15,6 +15,7 @@ import sys
 import json
 from pathlib import Path
 import uuid
+import random
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -60,6 +61,7 @@ pandarallel.initialize(progress_bar=True)
 FOLDER_WITH_API_MIGRATION_KNOWLEDGE = Path(
     "data/changelogs/v001/api_migration_docs")
 FOLDER_DATASET = Path("data/finetuning/datasets/generated")
+PATH_API_JSON = Path("data/finetuning/apis/old_version/entities.json")
 
 
 # Global variable to control interactive mode
@@ -114,6 +116,8 @@ class BrainstormQiskitTitles(dspy.Signature):
 
     inspiring_titles: str = dspy.InputField(
         desc="Inspiring titles from StackOverflow")
+    inspiring_api: str = dspy.InputField(
+        desc="Inspiring API documentation")
     num_titles: int = dspy.InputField(desc="Number of titles to generate")
     generated_titles: List[str] = dspy.OutputField(
         desc="List of generated titles")
@@ -123,6 +127,8 @@ class ExpandQiskitTitleToDescription(dspy.Signature):
     """Expand a title to a full description of a question on Stack Overflow about Qiskit."""
 
     title: str = dspy.InputField(desc="Title of the question")
+    inspiring_api: str = dspy.InputField(
+        desc="Inspiring API documentation")
     expanded_description: str = dspy.OutputField(
         desc="Expanded description of the question")
 
@@ -133,8 +139,10 @@ class ImplementQiskitAnswer(dspy.Signature):
     title: str = dspy.InputField(desc="Title of the question")
     expanded_description: str = dspy.InputField(
         desc="Expanded description of the question")
+    inspiring_api: str = dspy.InputField(
+        desc="Inspiring API documentation")
     code_snippet: str = dspy.OutputField(
-        desc="Self-contained Python code snippet for the implementation")
+        desc="Self-contained Python code snippet for the implementation. It must use something from the inspiring Qiskit API.")
 
 
 class ChipInAndHelp(dspy.Signature):
@@ -142,6 +150,8 @@ class ChipInAndHelp(dspy.Signature):
 
     title: str = dspy.InputField(desc="Title of the question")
     description: str = dspy.InputField(desc="Description of the question")
+    inspiring_api: str = dspy.InputField(
+        desc="Inspiring API documentation")
     implementation: str = dspy.InputField(
         desc="Original implementation code snippet")
     log_output: str = dspy.InputField(
@@ -149,7 +159,7 @@ class ChipInAndHelp(dspy.Signature):
     extra_context: str = dspy.InputField(
         desc="Extra context to help fix the code (e.g. API doc, docstrings, file contents, migration guides, release notes, etc.)")
     corrected_code: str = dspy.OutputField(
-        desc="Self-contained corrected Python code snippet")
+        desc="Self-contained corrected Python code snippet. It must use something from the inspiring Qiskit API.")
 
 
 def upgrade_qiskit_code(
@@ -226,16 +236,19 @@ def main():
     docs = load_migration_docs()
     qiskit_titles_generator = dspy.ChainOfThought(BrainstormQiskitTitles)
     n_programs_generated = 0
+    all_api_data = json.load(open(PATH_API_JSON, "r"))
 
     while n_programs_generated < N_PROGRAMS:
-        all_titles = generate_titles(qiskit_titles_generator)
-        selected_titles = select_titles(all_titles)
+        all_titles_and_apis = generate_titles(
+            qiskit_titles_generator, all_api_data)
+        selected_titles_and_apis = select_titles(all_titles_and_apis)
         console.log("Selected Diverse Titles:")
+        selected_titles = [title for title, _ in selected_titles_and_apis]
         console.log(selected_titles)
         wait_for_user()
 
-        for title in selected_titles:
-            process_title(title, docs)
+        for title, inspiring_api in selected_titles_and_apis:
+            process_title(title, docs, inspiring_api)
             n_programs_generated += 1
 
 
@@ -249,21 +262,29 @@ def load_migration_docs() -> List[str]:
     return docs
 
 
-def generate_titles(qiskit_titles_generator: dspy.ChainOfThought) -> List[str]:
-    all_titles = []
+def generate_titles(
+        qiskit_titles_generator: dspy.ChainOfThought, all_api_data) -> List[
+        Tuple[str, str]]:
+    all_titles_and_api = []
     console.log("Generated Titles:")
     for _ in range(3):
         inspiring_questions_titles = get_stackoverflow_inspiration()
+        inspiring_api = json.dumps(random.choice(all_api_data), indent=4)
+        console.log("Inspiring API:")
+        console.log(inspiring_api)
         lm = dspy.LM(BASE_MODEL)
         dspy.configure(lm=lm)
         response = retry_request(
             qiskit_titles_generator,
             inspiring_titles=inspiring_questions_titles,
+            inspiring_api=inspiring_api,
             num_titles=20
         )
-        all_titles.extend(response.generated_titles)
+        new_titles = response.generated_titles
+        all_titles_and_api.extend([
+            (title, inspiring_api) for title in new_titles])
         console.log(response.generated_titles)
-    return all_titles
+    return all_titles_and_api
 
 
 def retry_request(generator: dspy.ChainOfThought, **kwargs) -> Any:
@@ -282,26 +303,32 @@ def retry_request(generator: dspy.ChainOfThought, **kwargs) -> Any:
                 raise e
 
 
-def select_titles(all_titles: List[str]) -> List[str]:
-    return select_diverse_set_of_titles(
+def select_titles(all_titles_and_apis: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    all_titles = [title for title, _ in all_titles_and_apis]
+    selected_titles = select_diverse_set_of_titles(
         candidate_titles=list(set(all_titles)),
         already_selected_titles=get_existing_titles(FOLDER_DATASET),
         num_titles=5
     )
+    selected_titles_and_apis = [
+        (title, inspiring_api)
+        for title, inspiring_api in all_titles_and_apis
+        if title in selected_titles]
+    return selected_titles_and_apis
 
 
-def process_title(title: str, docs: List[str]) -> None:
+def process_title(title: str, docs: List[str], inspiring_api: str) -> None:
     intent_code = str(uuid.uuid4())
     console.log("Title:")
     console.log(title)
-    description_response = expand_title_to_description(title)
+    description_response = expand_title_to_description(title, inspiring_api)
     description = description_response.expanded_description
     console.log("Expanded Description:")
     console.log(description)
     wait_for_user()
 
     implementation_response = implement_answer(
-        title, description)
+        title, description, inspiring_api)
     i_snippet = implementation_response.code_snippet
     console.log("FIRST - Code Snippet:")
     console.log(i_snippet)
@@ -316,7 +343,7 @@ def process_title(title: str, docs: List[str]) -> None:
         i_errors = [old_version_logs]
     else:
         i_snippet, i_attempts, i_errors = fix_code(
-            title, description,
+            title, description, inspiring_api,
             implementation_response.code_snippet, old_version_logs,
             version_number="0.45.0")
 
@@ -341,7 +368,7 @@ def process_title(title: str, docs: List[str]) -> None:
             u_errors = [new_version_logs]
         else:
             u_snippet, u_attempts, u_errors = fix_code(
-                title, description,
+                title, description, inspiring_api,
                 u_snippet, new_version_logs, version_number="1.2.0", docs=docs)
             new_version_logs = u_errors[-1]
 
@@ -349,27 +376,32 @@ def process_title(title: str, docs: List[str]) -> None:
             save_code(u_snippet, intent_code, "NEW")
 
         save_data(
-            title, description, i_snippet,
-            i_attempts, i_errors, u_snippet, u_attempts, u_errors, intent_code)
+            title, description, inspiring_api,
+            i_snippet, i_attempts, i_errors,
+            u_snippet, u_attempts, u_errors,
+            intent_code)
 
 
-def expand_title_to_description(title: str) -> Any:
+def expand_title_to_description(title: str, inspiring_api: str) -> Any:
     lm = dspy.LM(BASE_MODEL)
     dspy.configure(lm=lm)
     expand_qiskit_title_to_description = dspy.ChainOfThought(
         ExpandQiskitTitleToDescription)
-    return expand_qiskit_title_to_description(title=title)
+    return expand_qiskit_title_to_description(
+        title=title, inspiring_api=inspiring_api)
 
 
-def implement_answer(title: str, description: str) -> Any:
+def implement_answer(title: str, description: str, inspiring_api: str) -> Any:
     lm = dspy.LM(BASE_MODEL)
     dspy.configure(lm=lm)
     implement_qiskit_answer = dspy.ChainOfThought(ImplementQiskitAnswer)
     return implement_qiskit_answer(
-        title=title, expanded_description=description)
+        title=title, expanded_description=description,
+        inspiring_api=inspiring_api)
 
 
-def fix_code(title: str, description: str, snippet: str, logs: str,
+def fix_code(title: str, description: str, inspiring_api: str,
+             snippet: str, logs: str,
              version_number: str, docs: List[str] = []) -> Tuple[str, List[str],
                                                                  List[str]]:
     chip_in_and_help = dspy.ChainOfThought(ChipInAndHelp)
@@ -412,6 +444,7 @@ def fix_code(title: str, description: str, snippet: str, logs: str,
         chip_in_response = chip_in_and_help(
             title=title,
             description=description,
+            inspiring_api=inspiring_api,
             implementation=snippet,
             log_output=logs,
             extra_context=extra_context)
@@ -438,14 +471,17 @@ def save_code(snippet: str, intent_code: str, version: str) -> None:
 
 
 def save_data(
-        title: str, description: str, i_snippet: str, i_attempts: List[str],
+        title: str, description: str, inspiring_api: str,
+        i_snippet: str, i_attempts: List[str],
         i_errors: List[str],
         u_snippet: str, u_attempts: List[str],
         u_errors: List[str],
         intent_code: str) -> None:
+    inspiring_api_dict = json.loads(inspiring_api)
     data = {
         "title": title,
         "description": description,
+        "inspiring_api": inspiring_api_dict,
         "old_version": {
             "code": i_snippet,
             "attempted_fixes": [

@@ -1,5 +1,6 @@
 import tempfile
 import docker
+from pathlib import Path
 from typing import List, Optional, Tuple, Dict
 from aiexchange.feedback.model_understanding import remove_backticks_lines
 
@@ -87,3 +88,46 @@ def run_qiskit_code_in_docker(code: str, image_name: str) -> str:
     finally:
         container.remove()
         code_file.close()
+
+
+def run_script_in_docker(
+        script_path: str, image_name: str, options: Dict[str, str] = dict({}),
+        output_dir: Optional[str] = None,
+        console=None) -> str:
+    """
+    Resolve the script_path and mount it in the Docker container at
+    /workspace/arbitrary_script.py.
+    """
+    client = docker.from_env()
+    abs_script_path = Path(script_path).resolve()
+    abs_output_dir = Path(output_dir).resolve() if output_dir else None
+    # convert the arguments to a string
+    options_str = " ".join(
+        [f"--{key} {value}" for key, value in options.items()])
+
+    volumes = {abs_script_path: {
+        'bind': '/workspace/arbitrary_script.py', 'mode': 'ro'}}
+    if abs_output_dir:
+        # if it is a file, we need to mount the parent folder
+        if "." in abs_output_dir.name:
+            output_path_folder = str(abs_output_dir.parent)
+        else:
+            output_path_folder = str(abs_output_dir)
+        volumes[output_path_folder] = {
+            'bind': "/workspace/output_folder", 'mode': 'rw'}
+    container = None
+    try:
+        container = client.containers.run(
+            image_name,
+            f"python /workspace/arbitrary_script.py {options_str}",
+            detach=True,
+            volumes=volumes,
+        )
+        container.wait()
+        logs = container.logs().decode('utf-8')
+        return logs
+    except Exception as e:
+        return str(e)
+    finally:
+        if container:
+            container.remove()

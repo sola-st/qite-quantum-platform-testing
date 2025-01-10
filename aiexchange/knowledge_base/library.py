@@ -1,3 +1,4 @@
+from pathlib import Path
 import docker
 from rich.console import Console
 
@@ -8,6 +9,7 @@ from aiexchange.tools.docker_tools import (
 from aiexchange.tools.token_counter import count_tokens
 import re
 from typing import List
+from aiexchange.tools.docker_tools import run_script_in_docker
 
 
 def get_chained_file_contents(
@@ -92,3 +94,44 @@ def get_files_from_entity(
                 file_path = match.group(1)
                 file_paths.append(file_path)
     return list(set(file_paths))
+
+
+def preprocess_extract_entities(
+        image_name: str, directory_to_scan: str, output_dir: str,
+        console=None) -> str:
+    """
+    Use aiexchange/knowledge_base/scan_functions.py to extract entities from the specified directory
+    inside a Docker container.
+    The output is stored in a JSON file in the specified output directory with the name entities.json.
+
+    Args:
+        image_name (str): The name of the Docker image to run.
+        directory (str): The directory inside the Docker container to scan for entities.
+        console (Console, optional): The console object for logging. Defaults to None.
+
+    Returns:
+        str: The output logs from running the script inside the Docker container.
+    """
+
+    current_folder = Path(__file__).parent
+    script_path = current_folder / "scan_functions.py"
+    local_output_folder = str(Path(output_dir).resolve())
+    options = {
+        "path_to_local_folder": directory_to_scan,
+        "output_path": "/workspace/output_folder/entities.json",
+    }
+
+    if console is None:
+        console = Console(color_system=None)
+    console.log(
+        f"Running entity extraction on directory: {directory_to_scan} in Docker container: {image_name}")
+
+    result = run_script_in_docker(
+        script_path=script_path,
+        image_name=image_name,
+        options=options,
+        output_dir=local_output_folder,
+        console=console
+    )
+
+    return result
