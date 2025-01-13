@@ -79,6 +79,7 @@ Convert the function above into a click v8 interface in Python.
 
 import os
 import random
+import json
 import click
 from pathlib import Path
 from datetime import datetime
@@ -97,13 +98,11 @@ from generators.strategies.base_generation import GenerationStrategy
 from generators.strategies.iteration_v001 import SPIUKnittingGenerationStrategy
 from generators.strategies.llm_generator import (
     LLMGenerationStrategy,
-    LLMMultiCircuitsGenerationStrategy
+    LLMMultiCircuitsGenerationStrategy,
+    LLMAPIBasedGenerationStrategy
 )
 from generators.strategies.fixed_files_generator import (
     TestSuiteOnlyGenerationStrategy
-)
-from generators.strategies.llm_generation_variations_A import (
-    LLMGenerationStrategy001
 )
 from generators.source_code_manipulation import get_source_code_functions_w_prefix
 from abc import ABC, abstractmethod
@@ -118,7 +117,7 @@ from generators.docker_tooling import (
     run_program_in_docker_pypi
 )
 
-console = Console()
+console = Console(color_system=None)
 
 
 def generate_output_folder(base_folder: Path, platform: str) -> Path:
@@ -280,12 +279,12 @@ def get_generation_strategy(
         return LLMGenerationStrategy(
             path_to_documentation=kwargs['path_to_documentation'],
         )
-    elif strategy_name == 'llm_generation_001':
-        return LLMGenerationStrategy001(
-            path_to_documentation=kwargs['path_to_documentation'],
-        )
     elif strategy_name == 'llm_multi_circuits_generation':
         return LLMMultiCircuitsGenerationStrategy()
+    elif strategy_name == 'llm_api_based_generation':
+        return LLMAPIBasedGenerationStrategy(
+            api_file=kwargs['api_file']
+        )
     else:
         raise ValueError(f"Unknown generation strategy: {strategy_name}")
 
@@ -311,12 +310,15 @@ def get_generation_strategy(
                help="Optional folder containing QASM/pkl files for seeding.")
 @ click.option('--path_to_documentation', default=None, type=Path,
                help="Path to the documentation file for LLM generation.")
+@ click.option('--api_file', default=None, type=Path,
+               help="Path to the API file for API-based generation.")
 def main(
         output_folder: str, prompt: Path, circuit_generation_strategy: str,
         max_n_qubits: int, max_n_gates: int, max_n_programs: int,
         perform_execution: bool, seed: Optional[int],
         seed_program_folder: Optional[Path],
-        path_to_documentation: Optional[Path]):
+        path_to_documentation: Optional[Path],
+        api_file: Optional[Path]):
     """
     CLI to generate Qiskit programs based on a MorphQ template and save them to files.
     """
@@ -342,10 +344,17 @@ def main(
         max_n_qubits=max_n_qubits,
         max_n_gates=max_n_gates,
         seed_program_folder=seed_program_folder,
-        path_to_documentation=path_to_documentation
+        path_to_documentation=path_to_documentation,
+        api_file=api_file
     )
     for i in range(max_n_programs):
         qc_circuit_source = generation_strategy.generate()
+
+        # Check if the generation strategy returns a tuple/list with program and metadata
+        metadata = dict({})
+        if isinstance(qc_circuit_source, (tuple, list)) and len(
+                qc_circuit_source) == 2:
+            qc_circuit_source, metadata = qc_circuit_source
 
         # get export functions
         export_functions_section = get_source_code_functions_w_prefix(
@@ -373,17 +382,34 @@ def main(
             TARGET_QC='qc',
             PERFORM_EXECUTION=perform_execution
         )
+        # Get unique ID
+        uuid_str = str(uuid4())[:6]
+        # Generate a zero-padded incremental ID
+        incremental_id = str(i + 1).zfill(7)
 
         # Save the generated program to a file
-        uuid_str = str(uuid4())[:6]
         save_program_to_file(
             output_path=output_path,
             program_code=program_code,
-            file_name=f"qiskit_circuit_{max_n_qubits}q_{max_n_gates}g_{i+1}_{uuid_str}.py"
+            file_name=f"{incremental_id}_{uuid_str}.py"
         )
 
+        # Save only the circuit code to a file
+        save_program_to_file(
+            output_path=output_path,
+            program_code=qc_circuit_source,
+            file_name=f"{incremental_id}_{uuid_str}_circuit.py"
+        )
+
+        # Save metadata to a file
+        metadata_file_name = f"{incremental_id}_{uuid_str}_metadata.json"
+        metadata_path = output_path / metadata_file_name
+        with open(metadata_path, 'w') as metadata_file:
+            json.dump(metadata, metadata_file)
+        console.log(f"Metadata saved to: {metadata_path}")
+
         # Run the generated program in Docker
-        file_name = f"qiskit_circuit_{max_n_qubits}q_{max_n_gates}g_{i+1}_{uuid_str}.py"
+        file_name = f"{incremental_id}_{uuid_str}.py"
         run_program_in_docker_pypi(folder_with_file=output_path,
                                    file_name=file_name,
                                    timeout=30,

@@ -35,7 +35,8 @@ import random
 from pathlib import Path
 from generators.strategies.base_generation import GenerationStrategy
 from groq import GroqError
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
+import json
 
 
 # check if the GROQ_API_KEY is set
@@ -201,3 +202,77 @@ class LLMMultiCircuitsGenerationStrategy(GenerationStrategy):
                 time.sleep(60)
                 return self.generate()
         return self.precomputed_circuits.pop(0)
+
+
+class GenerateProgramFromAPI(dspy.Signature):
+    """Generate a program inspired by this specific existing Qiskit API.
+
+    It must:
+    - only use Qiskit library and standard Python libraries
+    - the given API must be imported and used (it is defined already, no need to define it)
+    - be self-contained, without any external dependencies
+    - include at least one QuantumCircuit object
+    - import all the necessary modules / functions before using them
+    - return only Python code (no backticks, no comments, no markdown) in the
+      field: generated_python_program
+    """
+    api_description: str = dspy.InputField(
+        desc="The description of the API to inspire the program generation")
+    api_signature: str = dspy.InputField(
+        desc="The signature of the API to inspire the program generation")
+    full_api_name: str = dspy.InputField(
+        desc="The full name of the API to inspire the program generation")
+    api_file_path: str = dspy.InputField(
+        desc="The file path of the API to inspire the program generation")
+    generated_python_program: str = dspy.OutputField(
+        desc="The generated ptyhon program, which includes at least one QuantumCircuit object")
+    variable_name_of_circuit: str = dspy.OutputField(
+        desc="The variable name of the QuantumCircuit object")
+
+
+class GenerateProgramFromAPIModule(dspy.Module):
+    def __init__(self):
+        self.prog = dspy.ChainOfThought(
+            GenerateProgramFromAPI, temperature=1)
+
+    def forward(self, api_description: str, api_signature: str,
+                full_api_name: str, api_file_path: str) -> Dict[str, Any]:
+        results = self.prog(api_description=api_description,
+                            api_signature=api_signature,
+                            full_api_name=full_api_name,
+                            api_file_path=api_file_path)
+        return results
+
+
+class LLMAPIBasedGenerationStrategy(GenerationStrategy):
+    """It generates a program inspired by a specific API using the LLM model."""
+
+    def __init__(self, api_file: Path, *args, **kwargs):
+        self.api_file = api_file
+        self.api_data = self._load_api_data()
+        dspy.configure(lm=lm)
+        self.generator = GenerateProgramFromAPIModule()
+
+    def _load_api_data(self) -> List[Dict[str, Any]]:
+        """Load the API data from the JSON file."""
+        with open(self.api_file, 'r') as f:
+            return json.load(f)
+
+    def generate(self) -> Tuple[str, Dict[str, Any]]:
+        """Generates a program inspired by a specific API."""
+        api_info = random.choice(self.api_data)
+        metadata = {}
+        metadata["api_info"] = api_info
+        try:
+            res = self.generator(
+                api_description=api_info["api_description"],
+                api_signature=api_info["api_signature"],
+                full_api_name=api_info["full_api_name"],
+                api_file_path=api_info["file_path"])
+            metadata["dspy_store"] = res._store
+        except Exception as e:
+            print(f"Error: {e}")
+            print("Waiting for 60 seconds before retrying ...")
+            time.sleep(60)
+            return self.generate()
+        return res["generated_python_program"], metadata
