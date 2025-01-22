@@ -6,6 +6,7 @@ from validate.functions_oracle_calls import (
     oracle_exporter,
     oracle_optimizer,
     oracle_importer,
+    oracle_comparator,
     get_copy_of_all_circuits_vars,
     get_functions
 )
@@ -30,6 +31,11 @@ from validate.functions_qasm_import import (
     import_from_qasm_with_qiskit,
     import_from_qasm_with_pytket,
 )
+
+from validate.functions_qasm_compare import (
+    compare_qasm_via_qcec,
+)
+
 
 from typing import Dict, Callable
 
@@ -76,6 +82,10 @@ def mock_get_functions():
                     'pennylane': import_from_qasm_with_pennylane,
                     'pytket': import_from_qasm_with_pytket,
                     'bqskit': import_from_qasm_with_bqskit,
+                }
+            elif prefix == "compare_qasm_via_":
+                return {
+                    'qcec': compare_qasm_via_qcec,
                 }
             else:
                 return {}
@@ -149,3 +159,27 @@ def test_oracle_importer(
             print("-" * 80)
             print(imported_file.read_text())
             print("=" * 80)
+
+
+def test_oracle_comparator(
+        mock_get_copy_of_all_circuits_vars, mock_get_functions):
+    """Test oracle_comparator function when comparison raises an exception."""
+
+    output_dir = "/tmp/optimizer_test/"
+    os.makedirs(output_dir, exist_ok=True)
+    # with tempfile.TemporaryDirectory() as output_dir:
+    oracle_exporter(output_dir)
+    oracle_optimizer(output_dir)
+    oracle_comparator(output_dir)
+
+    # check that there is a comparison file in the temp directory
+    assert len(list(Path(output_dir).glob('*.json'))
+               ) > 0, "No comparison files exported."
+
+    # print the comparison files
+    for comparison_file in Path(output_dir).glob('*'):
+        print("-" * 80)
+        print(comparison_file)
+        print("-" * 80)
+        print(comparison_file.read_text())
+        print("=" * 80)
