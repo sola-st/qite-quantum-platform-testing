@@ -143,7 +143,7 @@ def optimize_with_pennylane(
     with open(file_path_pennylane, 'w') as f:
         f.write(qasm_str_pennylane)
 
-    print(f"Saved the PennyLane circuit to {file_path_pennylane}")
+    print(f"Saved Optimized PennyLane circuit to {file_path_pennylane}")
 
 
 # def optimize_with_bqskit(

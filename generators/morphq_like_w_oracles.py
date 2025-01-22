@@ -326,7 +326,7 @@ def get_generation_strategy(
                help="Path to the migration directory.")
 @ click.option('--model_dspy_name_id', default='qiskit',
                help="Name of the model in dspy.")
-@ click.option('--active_oracle', multiple=True, type=str,
+@ click.option('--active_oracles', multiple=True,
                help="List of active oracles to use in the generated programs.")
 def main(
         output_folder: str, prompt: Path, circuit_generation_strategy: str,
@@ -337,7 +337,7 @@ def main(
         api_file: Optional[Path],
         migration_dir: Optional[Path],
         model_dspy_name_id: str,
-        active_oracle: List[str]
+        active_oracles: List[str]
 ):
     """
     CLI to generate Qiskit programs based on a MorphQ template and save them to files.
@@ -404,7 +404,7 @@ def main(
 
         # oracles to use
         active_oracles_call_statements = "\n".join([
-            f"{oracle}()" for oracle in active_oracle
+            f"{oracle}()" for oracle in active_oracles
         ])
 
         # Render the program code using the template

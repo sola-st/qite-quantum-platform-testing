@@ -1,8 +1,10 @@
 import pytest
+import os
 import tempfile
 from pathlib import Path
 from validate.functions_oracle_calls import (
     oracle_exporter,
+    oracle_optimizer,
     get_copy_of_all_circuits_vars,
     get_functions
 )
@@ -14,6 +16,13 @@ from validate.functions_qasm_export import (
     export_to_qasm_with_qiskit,
     export_to_qasm_with_pytket,
 )
+
+from validate.functions_optimize import (
+    optimize_with_pytket,
+    optimize_with_pennylane,
+    optimize_with_qiskit
+)
+from typing import Dict, Callable
 
 
 @pytest.fixture
@@ -37,12 +46,25 @@ def mock_get_copy_of_all_circuits_vars(mock_qc):
 def mock_get_functions():
     """Fixture to mock get_functions function."""
     with patch('validate.functions_oracle_calls.get_functions') as mock:
-        mock.return_value = {
-            'qiskit': export_to_qasm_with_qiskit,
-            'pennylane': export_to_qasm_with_pennylane,
-            'pytket': export_to_qasm_with_pytket,
-            'bqskit': export_to_qasm_with_bqskit,
-        }
+
+        def side_effect(prefix: str) -> Dict[str, Callable]:
+            if prefix == "export_to_qasm_with_":
+                return {
+                    'qiskit': export_to_qasm_with_qiskit,
+                    'pennylane': export_to_qasm_with_pennylane,
+                    'pytket': export_to_qasm_with_pytket,
+                    'bqskit': export_to_qasm_with_bqskit,
+                }
+            elif prefix == "optimize_with_":
+                return {
+                    'qiskit': optimize_with_qiskit,
+                    'pennylane': optimize_with_pennylane,
+                    'pytket': optimize_with_pytket,
+                }
+            else:
+                return {}
+
+        mock.side_effect = side_effect
         yield mock
 
 
@@ -63,4 +85,28 @@ def test_oracle_exporter(
             print(qasm_file)
             print("-" * 80)
             print(qasm_file.read_text())
+            print("=" * 80)
+
+
+def test_oracle_optimizer(
+        mock_get_copy_of_all_circuits_vars, mock_get_functions):
+    """Test oracle_optimizer function when optimization raises an exception."""
+
+    # output_dir = "/tmp/optimizer_test/"
+    # os.makedirs(output_dir, exist_ok=True)
+    with tempfile.TemporaryDirectory() as output_dir:
+        print(f"\nOutput directory: {output_dir}")
+
+        oracle_optimizer(output_dir)
+
+        # check that there is an optimized file in the temp directory
+        assert len(list(Path(output_dir).glob('*.qasm'))
+                   ) > 0, "No optimized files exported."
+
+        # print the optimized files
+        for optimized_file in Path(output_dir).glob('*.qasm'):
+            print("-" * 80)
+            print(optimized_file)
+            print("-" * 80)
+            print(optimized_file.read_text())
             print("=" * 80)

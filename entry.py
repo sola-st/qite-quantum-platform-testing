@@ -91,7 +91,7 @@ import yaml
 import subprocess
 import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 import click
 from rich.console import Console
 
@@ -127,9 +127,12 @@ def build_command(command_config: Dict[str, Any]) -> str:
     # Convert the arguments to command line options
     cmd_parts = [f"python -m {module}"]
     for key, value in arguments.items():
-        if str(value) in ['True', 'False']:
+        if str(value) in ['True', 'False'] or isinstance(value, bool):
             if str(value) == 'True':
                 cmd_parts.append(f"--{key}")
+        elif isinstance(value, List):
+            for item in value:
+                cmd_parts.append(f"--{key} '{item}'")
         else:
             flag = f"--{key}"
             cmd_parts.append(f"{flag} {value}")
