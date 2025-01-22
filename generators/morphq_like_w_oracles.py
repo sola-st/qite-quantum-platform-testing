@@ -447,10 +447,12 @@ def main(
 
         # Run the generated program in Docker
         file_name = f"{incremental_id}_{uuid_str}.py"
-        run_program_in_docker_pypi(folder_with_file=output_path,
-                                   file_name=file_name,
-                                   timeout=30,
-                                   console=console)
+        run_program_in_docker_pypi(
+            folder_with_file=output_path,
+            file_name=file_name,
+            timeout=30,
+            console=console,
+            ignore_every_other_file_in_folder=True)
 
     console.log("Qiskit program generation completed.")
 

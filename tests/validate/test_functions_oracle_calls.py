@@ -5,6 +5,7 @@ from pathlib import Path
 from validate.functions_oracle_calls import (
     oracle_exporter,
     oracle_optimizer,
+    oracle_importer,
     get_copy_of_all_circuits_vars,
     get_functions
 )
@@ -22,6 +23,14 @@ from validate.functions_optimize import (
     optimize_with_pennylane,
     optimize_with_qiskit
 )
+
+from validate.functions_qasm_import import (
+    import_from_qasm_with_bqskit,
+    import_from_qasm_with_pennylane,
+    import_from_qasm_with_qiskit,
+    import_from_qasm_with_pytket,
+)
+
 from typing import Dict, Callable
 
 
@@ -60,6 +69,13 @@ def mock_get_functions():
                     'qiskit': optimize_with_qiskit,
                     'pennylane': optimize_with_pennylane,
                     'pytket': optimize_with_pytket,
+                }
+            elif prefix == "import_from_qasm_with_":
+                return {
+                    'qiskit': import_from_qasm_with_qiskit,
+                    'pennylane': import_from_qasm_with_pennylane,
+                    'pytket': import_from_qasm_with_pytket,
+                    'bqskit': import_from_qasm_with_bqskit,
                 }
             else:
                 return {}
@@ -109,4 +125,27 @@ def test_oracle_optimizer(
             print(optimized_file)
             print("-" * 80)
             print(optimized_file.read_text())
+            print("=" * 80)
+
+
+def test_oracle_importer(
+        mock_get_copy_of_all_circuits_vars, mock_get_functions):
+    """Test oracle_importer function when QASM import raises an exception."""
+
+    # output_dir = "/tmp/optimizer_test/"
+    # os.makedirs(output_dir, exist_ok=True)
+    with tempfile.TemporaryDirectory() as output_dir:
+        oracle_exporter(output_dir)
+        oracle_importer(output_dir)
+
+        # check that there is an imported file in the temp directory
+        assert len(list(Path(output_dir).glob('*.qasm'))
+                   ) > 0, "No imported files exported."
+
+        # print the imported files
+        for imported_file in Path(output_dir).glob('*.qasm'):
+            print("-" * 80)
+            print(imported_file)
+            print("-" * 80)
+            print(imported_file.read_text())
             print("=" * 80)

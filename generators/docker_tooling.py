@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Tuple, List, Union
 import subprocess
 import threading
+import tempfile
+import shutil
 
 
 def _execute_in_docker(
@@ -86,19 +88,24 @@ def run_program_in_docker_w_timeout(
 
 
 def run_program_in_docker_pypi(
-        folder_with_file: Path,
-        file_name: str,
-        timeout: int = 60,
-        console=None,
+        folder_with_file: Path, file_name: str, timeout: int = 60, console=None,
         collect_coverage: bool = False,
         packages: List[str] = ["/usr/local/lib/python3.10/site-packages/qiskit"],
         output_folder_coverage: str = None,
-) -> None:
+        ignore_every_other_file_in_folder: bool = False) -> None:
     """Runs the generated program in a Docker container with a timeout.
 
     It uses the pypi docker package to run the program in a container and get its container id to stop it if it times out.
     """
     client = docker.from_env()
+    if ignore_every_other_file_in_folder:
+        temp_dir = tempfile.TemporaryDirectory()
+        path_temp_dir = Path(temp_dir.name)
+        # copy the file to a temporary directory
+        shutil.copy(folder_with_file / file_name, path_temp_dir)
+        old_folder_with_file = folder_with_file
+        folder_with_file = path_temp_dir
+
     abs_folder = folder_with_file.resolve()
     if collect_coverage:
         assert output_folder_coverage is not None, "The output_folder_coverage for coverage must be provided if collect_coverage is True."
@@ -176,3 +183,10 @@ def run_program_in_docker_pypi(
             container.remove(force=True)
         if timer and timer.is_alive():
             timer.cancel()
+        if ignore_every_other_file_in_folder:
+            # copy all new files to the original folder
+            for file in path_temp_dir.iterdir():
+                if file.is_file():
+                    shutil.copy(file, old_folder_with_file)
+            # remove the temporary directory
+            temp_dir.cleanup()

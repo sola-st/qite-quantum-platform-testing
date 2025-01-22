@@ -44,7 +44,8 @@ def log_exception_to_json(
     exception: Exception,
     stack_trace: str,
     involved_functions: List[str],
-    output_dir: str = None
+    output_dir: str = None,
+    extra_info: Dict[str, Any] = None,
 ) -> None:
     """
     Logs the stack trace, current file, exception message, and involved functions to a JSON file.
@@ -70,6 +71,7 @@ def log_exception_to_json(
         "current_file": current_file.name,
         "involved_functions": involved_functions,
         "timestamp": time.time(),
+        "extra_info": extra_info,
     }
 
     # Write the log details to a JSON file
@@ -170,3 +172,35 @@ def oracle_optimizer(output_dir: str = None) -> None:
                 log_exception_to_json(
                     e, stack_trace, involved_functions,
                     output_dir=output_dir)
+
+
+def oracle_importer(input_dir: str = None) -> None:
+    """Run all the oracle functions to import QASM files.
+
+    If no input directory is provided, the QASM files will be read from the
+    current directory.
+    """
+    parser_calls = get_functions(prefix="import_from_qasm_with_")
+
+    if input_dir:
+        dir_w_qasm = Path(input_dir)
+    else:
+        dir_w_qasm = Path(".")
+
+    for qasm_file in dir_w_qasm.glob("*.qasm"):
+        for platform, parser_call in parser_calls.items():
+            try:
+                parsed_qc = parser_call(str(qasm_file))
+            except Exception as e:
+                stack_trace = traceback.format_exc()
+                involved_functions = [parser_call.__name__]
+                extra_info = {"input_qasm_file": str(qasm_file)}
+                platform_generating_programs = [
+                    pname for pname in parser_calls.keys()
+                    if pname in qasm_file.stem]
+                if len(platform_generating_programs) > 0:
+                    extra_info["platform_generating_programs"] = platform_generating_programs
+                log_exception_to_json(
+                    e, stack_trace, involved_functions,
+                    extra_info=extra_info,
+                    output_dir=input_dir)

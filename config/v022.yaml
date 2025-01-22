@@ -19,6 +19,7 @@ commands:
       active_oracles:
         - oracle_exporter
         - oracle_optimizer
+        - oracle_importer
 
       # path_to_documentation: generators/strategies/docs_artifacts/qiskit_std.md
       # seed_program_folder: data/circuit_fragments
