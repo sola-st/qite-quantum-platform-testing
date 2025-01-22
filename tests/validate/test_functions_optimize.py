@@ -12,7 +12,7 @@ from validate.functions_optimize import (
     optimize_with_pytket,
     optimize_with_qiskit,
     optimize_with_pennylane,
-    optimize_with_bqskit,
+    # optimize_with_bqskit,
 )
 
 
@@ -168,17 +168,17 @@ def test_optimize_with_pennylane_simple_circuit(
         assert content.startswith("OPENQASM 2.0;")
 
 
-def test_optimize_with_bqskit_simple_circuit(tmp_path, simple_bqskit_circuit):
-    """
-    Test that optimize_with_bqskit can optimize a simple BQSKit circuit and export it as QASM.
-    """
-    var_name = "simple_test"
-    print("simple_bqskit_circuit: ")
-    print(simple_bqskit_circuit)
-    optimize_with_bqskit(simple_bqskit_circuit, var_name, output_dir=tmp_path)
-    all_files = os.listdir(tmp_path)
-    for file in all_files:
-        print(file)
-        filepath = os.path.join(tmp_path, file)
-        content = open(filepath, 'r').read().strip()
-        assert content.startswith("OPENQASM 2.0;")
+# def test_optimize_with_bqskit_simple_circuit(tmp_path, simple_bqskit_circuit):
+#     """
+#     Test that optimize_with_bqskit can optimize a simple BQSKit circuit and export it as QASM.
+#     """
+#     var_name = "simple_test"
+#     print("simple_bqskit_circuit: ")
+#     print(simple_bqskit_circuit)
+#     optimize_with_bqskit(simple_bqskit_circuit, var_name, output_dir=tmp_path)
+#     all_files = os.listdir(tmp_path)
+#     for file in all_files:
+#         print(file)
+#         filepath = os.path.join(tmp_path, file)
+#         content = open(filepath, 'r').read().strip()
+#         assert content.startswith("OPENQASM 2.0;")

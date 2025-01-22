@@ -2,6 +2,12 @@
 import ast
 from pathlib import Path
 from generators.strategies.llm_generator import LLMGenerationStrategy
+import aiexchange.tools.base_model_setup
+import dspy
+
+
+lm = dspy.LM('groq/llama-3.3-70b-versatile')
+dspy.configure(lm=lm)
 
 
 def test_load_documentation():
