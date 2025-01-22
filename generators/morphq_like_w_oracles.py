@@ -105,12 +105,16 @@ from generators.strategies.llm_generator import (
 from generators.strategies.fixed_files_generator import (
     TestSuiteOnlyGenerationStrategy
 )
-from generators.source_code_manipulation import get_source_code_functions_w_prefix
+from generators.source_code_manipulation import (
+    get_source_code_functions_w_prefix,
+    get_entire_source_code_module
+)
 from abc import ABC, abstractmethod
 import validate.functions_qasm_export as export_functions
 import validate.functions_qasm_import as import_functions
 import validate.functions_qasm_compare as compare_functions
 import validate.functions_optimize as optimize_functions
+import validate.functions_oracle_calls as oracle_functions
 
 from generators.combine_circuits import combine_circuits
 
@@ -322,6 +326,8 @@ def get_generation_strategy(
                help="Path to the migration directory.")
 @ click.option('--model_dspy_name_id', default='qiskit',
                help="Name of the model in dspy.")
+@ click.option('--active_oracle', multiple=True, type=str,
+               help="List of active oracles to use in the generated programs.")
 def main(
         output_folder: str, prompt: Path, circuit_generation_strategy: str,
         max_n_qubits: int, max_n_gates: int, max_n_programs: int,
@@ -330,7 +336,9 @@ def main(
         path_to_documentation: Optional[Path],
         api_file: Optional[Path],
         migration_dir: Optional[Path],
-        model_dspy_name_id: str):
+        model_dspy_name_id: str,
+        active_oracle: List[str]
+):
     """
     CLI to generate Qiskit programs based on a MorphQ template and save them to files.
     """
@@ -389,6 +397,16 @@ def main(
         compare_functions_section = get_source_code_functions_w_prefix(
             prefix='compare_', module=compare_functions)
 
+        # get oracle functions
+        oracle_functions_section = get_entire_source_code_module(
+            module=oracle_functions
+        )
+
+        # oracles to use
+        active_oracles_call_statements = "\n".join([
+            f"{oracle}()" for oracle in active_oracle
+        ])
+
         # Render the program code using the template
         program_code = template.render(
             QC_CIRCUIT_CODE=qc_circuit_source,
@@ -397,7 +415,9 @@ def main(
             FUNCTIONS_OPTIMIZE=optimize_functions_section,
             FUNCTIONS_COMPARE=compare_functions_section,
             TARGET_QC='qc',
-            PERFORM_EXECUTION=perform_execution
+            PERFORM_EXECUTION=perform_execution,
+            FUNCTIONS_ORACLE=oracle_functions_section,
+            ORACLE_TO_USE=active_oracles_call_statements,
         )
         # Get unique ID
         uuid_str = str(uuid4())[:6]

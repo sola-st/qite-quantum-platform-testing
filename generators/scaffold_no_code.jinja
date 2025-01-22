@@ -1,0 +1,72 @@
+# Section: Prologue
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit_aer import AerSimulator
+from qiskit_ibm_runtime import Session, Sampler
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+
+# Section: Circuit
+{{QC_CIRCUIT_CODE}}
+
+{% if PERFORM_EXECUTION %}
+# Section: Execution
+# Run the sampler job locally using AerSimulator.
+# Session syntax is supported but ignored.
+aer_sim = AerSimulator()
+
+# Transpile
+pm = generate_preset_pass_manager(backend=aer_sim, optimization_level=1)
+isa_qc = pm.run(qc)
+
+# The session is used but ignored in AerSimulator.
+sampler = Sampler(mode=aer_sim)
+result = sampler.run([isa_qc]).result()[0]
+
+# Section: Results
+counts = result.data.cr.get_counts()
+print(f"Measurement results: {counts}")
+{% endif %}
+
+
+# Helper Functions
+import os
+import traceback
+import json
+import uuid
+import sys
+import time
+import inspect
+from pathlib import Path
+from typing import List, Dict, Any, Callable, Tuple, Optional
+
+
+
+# Section: Oracle Functions
+# <START_FUNCTIONS_EXPORT>
+{{FUNCTIONS_EXPORT_TO_QASM}}
+# <END_FUNCTIONS_EXPORT>
+# <START_FUNCTIONS_IMPORT>
+{{FUNCTION_IMPORT_FROM_QASM}}
+# <END_FUNCTIONS_IMPORT>
+# <START_FUNCTIONS_COMPARE>
+{{FUNCTIONS_COMPARE}}
+# <END_FUNCTIONS_COMPARE>
+# <START_FUNCTIONS_OPTIMIZE>
+{{FUNCTIONS_OPTIMIZE}}
+# <END_FUNCTIONS_OPTIMIZE>
+# <START_ORACLE_FUNCTIONS>
+{{FUNCTIONS_ORACLE}}
+# <END_ORACLE_FUNCTIONS>
+
+
+# Section: Test Oracle Calls
+# <START_TEST_ORACLE_CALLS>
+{{ORACLE_TO_USE}}
+# <END_TEST_ORACLE_CALLS>
+
+
+
+
+
+
+
+

@@ -1,0 +1,22 @@
+# v022: Random with Equivalence after Optimization oracle
+
+# Changelog
+# - from v015
+# - support crash oracle: while optimizing circuit individually
+# - support equivalence oracle: after optimization
+
+commands:
+  - module: generators.morphq_like_w_oracles
+    arguments:
+      prompt: generators/scaffold_no_code.jinja
+      output_folder: program_bank/v022/
+      circuit_generation_strategy: "random"
+      max_n_qubits: 11
+      max_n_gates: 5
+      max_n_programs: 3
+      perform_execution: False
+
+      active_oracle: oracle_exporter
+
+      # path_to_documentation: generators/strategies/docs_artifacts/qiskit_std.md
+      # seed_program_folder: data/circuit_fragments

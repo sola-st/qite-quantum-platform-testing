@@ -3,11 +3,11 @@ import astor
 import ast
 import inspect
 import importlib
-from typing import List
+from typing import List, Any
 
 
 def get_source_code_functions_w_prefix(
-        prefix: str, module: str) -> str:
+        prefix: str, module: Any) -> str:
     """Get the source code of the functions with the given prefix from the module."""
     functions = inspect.getmembers(module, inspect.isfunction)
     filtered_functions = [
@@ -16,6 +16,25 @@ def get_source_code_functions_w_prefix(
     filtered_functions = [inspect.getsource(
         func) for func in filtered_functions]
     return "\n".join(filtered_functions)
+
+
+def get_entire_source_code_module(module: Any) -> str:
+    """Get the entire source code of the module."""
+    source_code = inspect.getsource(module)
+    return source_code
+
+
+def get_source_code_imports(module: str) -> str:
+    """Get the source code of the imports from the module.
+
+    It uses inspect and keeps only the statements that start with import or from.
+    """
+    source_code = inspect.getsource(module)
+    tree = ast.parse(source_code)
+    imports = [node for node in tree.body if isinstance(
+        node, (ast.Import, ast.ImportFrom))]
+    import_lines = [astor.to_source(node) for node in imports]
+    return "".join(import_lines)
 
 
 def get_functions_w_prefix(

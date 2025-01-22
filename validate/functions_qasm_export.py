@@ -5,7 +5,8 @@ from typing import Optional
 
 
 def export_to_qasm_with_pytket(
-        qiskit_circ: QuantumCircuit, var_name: str) -> Optional[str]:
+        qiskit_circ: QuantumCircuit, var_name: str,
+        abs_output_file: str = None) -> Optional[str]:
     """Export a Qiskit circuit to a Pytket QASM file."""
     from pytket.extensions.qiskit import qiskit_to_tk
     from pytket.qasm import circuit_to_qasm_str
@@ -16,10 +17,13 @@ def export_to_qasm_with_pytket(
         tket_circ, header="qelib1", maxwidth=200)
 
     # Determine file path
-    current_file = Path(__file__)
-    file_stem = current_file.stem
-    file_path_pytket = current_file.with_name(
-        f"{file_stem}_{var_name}_pytket.qasm")
+    if not abs_output_file:
+        current_file = Path(__file__)
+        file_stem = current_file.stem
+        file_path_pytket = current_file.with_name(
+            f"{file_stem}_{var_name}_pytket.qasm")
+    else:
+        file_path_pytket = Path(abs_output_file)
 
     with open(file_path_pytket, 'w') as f:
         f.write(qasm_str_tket)
@@ -29,15 +33,19 @@ def export_to_qasm_with_pytket(
 
 
 def export_to_qasm_with_qiskit(
-        qiskit_circ: QuantumCircuit, var_name: str) -> Optional[str]:
+        qiskit_circ: QuantumCircuit, var_name: str,
+        abs_output_file: str = None) -> Optional[str]:
     """Export a Qiskit circuit to a Qiskit QASM file."""
     from qiskit import qasm2
 
     # Determine file path
-    current_file = Path(__file__)
-    file_stem = current_file.stem
-    file_path_qiskit = current_file.with_name(
-        f"{file_stem}_{var_name}_qiskit.qasm")
+    if not abs_output_file:
+        current_file = Path(__file__)
+        file_stem = current_file.stem
+        file_path_qiskit = current_file.with_name(
+            f"{file_stem}_{var_name}_qiskit.qasm")
+    else:
+        file_path_qiskit = Path(abs_output_file)
 
     # Save Qiskit circuit directly to QASM
     qasm2.dump(qiskit_circ, file_path_qiskit)
@@ -47,7 +55,8 @@ def export_to_qasm_with_qiskit(
 
 
 def export_to_qasm_with_pennylane(
-        qiskit_circ: QuantumCircuit, var_name: str) -> Optional[str]:
+        qiskit_circ: QuantumCircuit, var_name: str,
+        abs_output_file: str = None) -> Optional[str]:
     """Export a Qiskit circuit to a PennyLane QASM file."""
     import pennylane as qml
     from pennylane.tape import QuantumTape
@@ -78,10 +87,13 @@ def export_to_qasm_with_pennylane(
                 tape.wires))
 
     # Determine file path
-    current_file = Path(__file__)
-    file_stem = current_file.stem
-    file_path_pennylane = current_file.with_name(
-        f"{file_stem}_{var_name}_pennylane.qasm")
+    if not abs_output_file:
+        current_file = Path(__file__)
+        file_stem = current_file.stem
+        file_path_pennylane = current_file.with_name(
+            f"{file_stem}_{var_name}_pennylane.qasm")
+    else:
+        file_path_pennylane = Path(abs_output_file)
 
     # Save PennyLane QASM string to file
     with open(file_path_pennylane, 'w') as f:
@@ -92,16 +104,20 @@ def export_to_qasm_with_pennylane(
 
 
 def export_to_qasm_with_bqskit(
-        qiskit_circ: QuantumCircuit, var_name: str) -> Optional[str]:
+        qiskit_circ: QuantumCircuit, var_name: str,
+        abs_output_file: str = None) -> Optional[str]:
     """Export a Qiskit circuit to a BQSKit QASM file."""
     from bqskit.ext import qiskit_to_bqskit
     bqskit_circ = qiskit_to_bqskit(qiskit_circ)
 
     # Determine file path
-    current_file = Path(__file__)
-    file_stem = current_file.stem
-    file_path_bqskit = current_file.with_name(
-        f"{file_stem}_{var_name}_bqskit.qasm")
+    if not abs_output_file:
+        current_file = Path(__file__)
+        file_stem = current_file.stem
+        file_path_bqskit = current_file.with_name(
+            f"{file_stem}_{var_name}_bqskit.qasm")
+    else:
+        file_path_bqskit = Path(abs_output_file)
 
     # Save BQSKit circuit to QASM
     bqskit_circ.save(str(file_path_bqskit))
