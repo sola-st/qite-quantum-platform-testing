@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+from sentence_transformers import SentenceTransformer
 import tempfile
 import docker
 from bs4 import BeautifulSoup
@@ -69,6 +70,13 @@ INTERACTIVE_MODE = False
 SLEEP_TIME = 5  # Configurable timeout for autonomous mode
 N_PROGRAMS = 10  # Number of programs to generate
 FIXING_ATTEMPTS = 3  # Number of attempts to fix the code
+
+
+# Configure DSPY Models
+BASE_MODEL = 'groq/llama-3.1-70b-versatile'
+LARGE_CONTEXT_MODEL = 'gemini/gemini-1.5-flash'
+# Load a pretrained Sentence Transformer model
+EMBEDDING_MODEL = SentenceTransformer("multi-qa-mpnet-base-cos-v1")
 
 
 def wait_for_user():

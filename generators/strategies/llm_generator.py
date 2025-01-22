@@ -37,15 +37,14 @@ from generators.strategies.base_generation import GenerationStrategy
 from groq import GroqError
 from typing import List, Dict, Any, Tuple
 import json
+from aiexchange.tools.docker_tools import run_qiskit_code_in_docker
+from aiexchange.feedback.log_understanding import is_code_fixed
+import aiexchange.tools.base_model_setup
 
-
-# check if the GROQ_API_KEY is set
-if "GROQ_API_KEY" not in os.environ:
-    os.environ["GROQ_API_KEY"] = Path("groq_token.txt").read_text().strip()
 
 # lm = dspy.LM('groq/gemma-7b-it')
 # lm = dspy.LM('groq/llama-3.3-70b-versatile')
-lm = dspy.LM('groq/llama-3.1-70b-versatile')
+# lm = dspy.LM('groq/llama-3.1-70b-versatile')
 
 
 class GenerateQuantumCircuit(dspy.Signature):
@@ -63,7 +62,6 @@ class LLMGenerationStrategy(GenerationStrategy):
     def __init__(self, path_to_documentation: Path, *args, **kwargs):
         self.path_to_documentation = path_to_documentation
         self.documentation_content = self._load_documentation()
-        dspy.configure(lm=lm)
         self.generator = dspy.ChainOfThought(
             GenerateQuantumCircuit, temperature=1.5)
         self.retries = 0
@@ -184,7 +182,6 @@ class LLMMultiCircuitsGenerationStrategy(GenerationStrategy):
     """It generates multiple Qiskit circuits using the LLM model."""
 
     def __init__(self, *args, **kwargs):
-        dspy.configure(lm=lm)
         self.generator = GenerateMultipleCircuits()
         self.precomputed_circuits = []
 
@@ -249,8 +246,10 @@ class LLMAPIBasedGenerationStrategy(GenerationStrategy):
 
     def __init__(self, api_file: Path, *args, **kwargs):
         self.api_file = api_file
-        self.api_data = self._load_api_data()
-        dspy.configure(lm=lm)
+        if str(api_file).lower() in ["", "none", "null", "empty"]:
+            self.api_file = None
+        if self.api_file is not None:
+            self.api_data = self._load_api_data()
         self.generator = GenerateProgramFromAPIModule()
 
     def _load_api_data(self) -> List[Dict[str, Any]]:
@@ -258,9 +257,28 @@ class LLMAPIBasedGenerationStrategy(GenerationStrategy):
         with open(self.api_file, 'r') as f:
             return json.load(f)
 
+    def _remove_backticks(self, python_code: str) -> str:
+        """Removes the backticks from the Python code."""
+        python_code = python_code.strip()
+        if python_code.startswith("```"):
+            # remove the first line
+            python_code = python_code[python_code.find("\n") + 1:]
+        if python_code.endswith("```"):
+            # remove it from the end
+            python_code = python_code[:-3]
+        return python_code
+
     def generate(self) -> Tuple[str, Dict[str, Any]]:
         """Generates a program inspired by a specific API."""
-        api_info = random.choice(self.api_data)
+        if not self.api_file:
+            api_info: Dict[str, Any] = {
+                "api_description": "No description available",
+                "api_signature": "No signature available",
+                "full_api_name": "No name available",
+                "file_path": "No file path available"
+            }
+        else:
+            api_info = random.choice(self.api_data)
         metadata = {}
         metadata["api_info"] = api_info
         try:
@@ -270,9 +288,172 @@ class LLMAPIBasedGenerationStrategy(GenerationStrategy):
                 full_api_name=api_info["full_api_name"],
                 api_file_path=api_info["file_path"])
             metadata["dspy_store"] = res._store
+            lm = dspy.settings["lm"]
+            last_interaction = lm.history[-1]
+            metadata["llm_usage"] = last_interaction["usage"]
+            metadata["llm_timestamp"] = last_interaction["timestamp"]
+            metadata["llm_model"] = last_interaction["model"]
         except Exception as e:
             print(f"Error: {e}")
             print("Waiting for 60 seconds before retrying ...")
             time.sleep(60)
             return self.generate()
-        return res["generated_python_program"], metadata
+        return self._remove_backticks(
+            res["generated_python_program"]), metadata
+
+
+class MigrateProgram(dspy.Signature):
+    """Migrate an existing program to the latest version of Qiskit.
+
+    It must:
+    - still use the same API as the existing code
+    - use the provided migration context to guide the migration
+    - only use Qiskit library and standard Python libraries
+    - be self-contained, without any external dependencies
+    - include at least one QuantumCircuit object
+    - import all the necessary modules / functions before using them
+    - return only Python code (no backticks, no comments, no markdown) in the
+        field: migrated_python_program
+    """
+    api_description: str = dspy.InputField(
+        desc="The description of the API to inspire the program migration")
+    api_signature: str = dspy.InputField(
+        desc="The signature of the API to inspire the program migration")
+    full_api_name: str = dspy.InputField(
+        desc="The full name of the API to inspire the program migration")
+    api_file_path: str = dspy.InputField(
+        desc="The file path of the API to inspire the program migration")
+    migration_context: str = dspy.InputField(
+        desc="The context to guide the migration")
+    existing_code: str = dspy.InputField(
+        desc="The existing code to be migrated")
+    runtime_error: str = dspy.InputField(
+        desc="The runtime error generated by the existing code")
+    migrated_python_program: str = dspy.OutputField(
+        desc="The migrated python program, which includes at least one QuantumCircuit object")
+    variable_name_of_circuit: str = dspy.OutputField(
+        desc="The variable name of the QuantumCircuit object")
+
+
+class MigrateProgramModule(dspy.Module):
+    def __init__(self):
+        self.prog = dspy.ChainOfThought(
+            MigrateProgram, temperature=1)
+
+    def forward(self, api_description: str, api_signature: str,
+                full_api_name: str, api_file_path: str,
+                migration_context: str, existing_code: str,
+                runtime_error: str) -> Dict[str, Any]:
+        results = self.prog(api_description=api_description,
+                            api_signature=api_signature,
+                            full_api_name=full_api_name,
+                            api_file_path=api_file_path,
+                            migration_context=migration_context,
+                            existing_code=existing_code,
+                            runtime_error=runtime_error)
+        return results
+
+
+class LLMAPIwithMigrationGenerationStrategy(LLMAPIBasedGenerationStrategy):
+    """It generates a program inspired by a specific API using the LLM model.
+
+    It also migrates the program to the latest version of Qiskit.
+    """
+
+    def __init__(self, api_file: Path, migration_dir: Path, *args, **kwargs):
+        super().__init__(api_file, *args, **kwargs)
+        self.migration_dir = migration_dir
+        self.image_starting_version = "qiskit_image_0.45.0"
+        self.image_target_version = "qiskit_image_1.2.0"
+        self.migration_context = self._load_migration_files()
+
+    def _load_migration_files(self) -> str:
+        """Load the migration files from the directory."""
+        migration_context = ""
+        file_header_template = ""
+        file_header_template += "=" * 80 + "\n"
+        file_header_template += "Migration File: {}\n"
+        file_header_template += "=" * 80 + "\n"
+        for file in self.migration_dir.glob("*.md"):
+            with open(file, 'r') as f:
+                file_content = f.read()
+            file_header = file_header_template.format(file.name)
+            migration_context += file_header + file_content + "\n"
+        return migration_context
+
+    def _migrate_program(
+            self, python_code: str, api_info: Dict[str, Any], runtime_error: str
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Migrates the program to the latest version of Qiskit."""
+        try:
+            migrator = MigrateProgramModule()
+            res = migrator(
+                api_description=api_info["api_description"],
+                api_signature=api_info["api_signature"],
+                full_api_name=api_info["full_api_name"],
+                api_file_path=api_info["file_path"],
+                runtime_error=runtime_error,
+                migration_context=self.migration_context,
+                existing_code=python_code)
+            migration_metadata = {}
+            migration_metadata["dspy_store"] = res._store
+            lm = dspy.settings["lm"]
+            last_interaction = lm.history[-1]
+            migration_metadata["llm_usage"] = last_interaction["usage"]
+            migration_metadata["llm_timestamp"] = last_interaction["timestamp"]
+            migration_metadata["llm_model"] = last_interaction["model"]
+        except Exception as e:
+            print(f"Error: {e}")
+            print("Waiting for 60 seconds before retrying ...")
+            time.sleep(60)
+            return self._migrate_program(python_code, api_info)
+        return self._remove_backticks(
+            res["migrated_python_program"]), migration_metadata
+
+    def generate(self) -> Tuple[str, Dict[str, Any]]:
+        """Generates a program inspired by a specific API and migrates it to the latest version of Qiskit."""
+        python_code, metadata = super().generate()
+        log_first_generation = run_qiskit_code_in_docker(
+            code=python_code,
+            image_name=self.image_target_version
+        )
+        metadata["execution_feedback"] = [{
+            "id": 1,
+            "image": self.image_target_version,
+            "log": log_first_generation,
+            "fixed": is_code_fixed(log_first_generation)
+        }]
+        # BEST CASE: the code works on the target version
+        if is_code_fixed(log_first_generation):
+            return python_code, metadata
+        log_first_generation_old = run_qiskit_code_in_docker(
+            code=python_code,
+            image_name=self.image_starting_version
+        )
+        metadata["execution_feedback"].append({
+            "id": 2,
+            "image": self.image_starting_version,
+            "log": log_first_generation_old,
+            "fixed": is_code_fixed(log_first_generation_old)
+        })
+        # MEDIUM CASE: the code works on the starting version, let's migrate it
+        if is_code_fixed(log_first_generation_old):
+            api_info = metadata["api_info"]
+            migrated_python_code, migration_metadata = self._migrate_program(
+                python_code, api_info=api_info,
+                runtime_error=log_first_generation)
+            metadata["migration_metadata"] = migration_metadata
+            log_second_generation = run_qiskit_code_in_docker(
+                code=migrated_python_code,
+                image_name=self.image_target_version
+            )
+            metadata["execution_feedback"].append({
+                "id": 3,
+                "image": self.image_target_version,
+                "log": log_second_generation,
+                "fixed": is_code_fixed(log_second_generation)
+            })
+            return migrated_python_code, metadata
+
+        # WORST CASE: the code does not work on both versions, we give up
+        return python_code, metadata

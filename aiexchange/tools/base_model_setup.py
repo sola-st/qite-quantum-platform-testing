@@ -2,22 +2,23 @@ import os
 from pathlib import Path
 
 import google.generativeai as genai
-from sentence_transformers import SentenceTransformer
 
 # Configure Google API
-GEMINI_TOKEN_PATH = Path("gemini_token.txt").resolve()
-GEMINI_TOKEN = GEMINI_TOKEN_PATH.read_text().strip()
-genai.configure(api_key=GEMINI_TOKEN)
-os.environ["GEMINI_API_KEY"] = GEMINI_TOKEN
+if "GROQ_API_KEY" not in os.environ:
+    GEMINI_TOKEN_PATH = Path("gemini_token.txt").resolve()
+    GEMINI_TOKEN = GEMINI_TOKEN_PATH.read_text().strip()
+    genai.configure(api_key=GEMINI_TOKEN)
+    os.environ["GEMINI_API_KEY"] = GEMINI_TOKEN
 
 # Configure Groq API
-GROQ_TOKEN_PATH = Path("groq_token.txt").resolve()
-GROQ_TOKEN = GROQ_TOKEN_PATH.read_text().strip()
-os.environ["GROQ_API_KEY"] = GROQ_TOKEN
+if "GROQ_API_KEY" not in os.environ:
+    GROQ_TOKEN_PATH = Path("groq_token.txt").resolve()
+    GROQ_TOKEN = GROQ_TOKEN_PATH.read_text().strip()
+    os.environ["GROQ_API_KEY"] = GROQ_TOKEN
 
-# Configure DSPY Models
-BASE_MODEL = 'groq/llama-3.1-70b-versatile'
-LARGE_CONTEXT_MODEL = 'gemini/gemini-1.5-flash'
 
-# Load a pretrained Sentence Transformer model
-EMBEDDING_MODEL = SentenceTransformer("multi-qa-mpnet-base-cos-v1")
+# Configure OPENAI API
+if "OPENAI_API_KEY" not in os.environ:
+    OPENAI_TOKEN_PATH = Path("openai_token.txt").resolve()
+    OPENAI_TOKEN = OPENAI_TOKEN_PATH.read_text().strip()
+    os.environ["OPENAI_API_KEY"] = OPENAI_TOKEN

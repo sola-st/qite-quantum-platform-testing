@@ -99,7 +99,8 @@ from generators.strategies.iteration_v001 import SPIUKnittingGenerationStrategy
 from generators.strategies.llm_generator import (
     LLMGenerationStrategy,
     LLMMultiCircuitsGenerationStrategy,
-    LLMAPIBasedGenerationStrategy
+    LLMAPIBasedGenerationStrategy,
+    LLMAPIwithMigrationGenerationStrategy
 )
 from generators.strategies.fixed_files_generator import (
     TestSuiteOnlyGenerationStrategy
@@ -285,6 +286,11 @@ def get_generation_strategy(
         return LLMAPIBasedGenerationStrategy(
             api_file=kwargs['api_file']
         )
+    elif strategy_name == 'llm_api_with_migration':
+        return LLMAPIwithMigrationGenerationStrategy(
+            api_file=kwargs['api_file'],
+            migration_dir=kwargs['migration_dir']
+        )
     else:
         raise ValueError(f"Unknown generation strategy: {strategy_name}")
 
@@ -312,13 +318,19 @@ def get_generation_strategy(
                help="Path to the documentation file for LLM generation.")
 @ click.option('--api_file', default=None, type=Path,
                help="Path to the API file for API-based generation.")
+@ click.option('--migration_dir', default=None, type=Path,
+               help="Path to the migration directory.")
+@ click.option('--model_dspy_name_id', default='qiskit',
+               help="Name of the model in dspy.")
 def main(
         output_folder: str, prompt: Path, circuit_generation_strategy: str,
         max_n_qubits: int, max_n_gates: int, max_n_programs: int,
         perform_execution: bool, seed: Optional[int],
         seed_program_folder: Optional[Path],
         path_to_documentation: Optional[Path],
-        api_file: Optional[Path]):
+        api_file: Optional[Path],
+        migration_dir: Optional[Path],
+        model_dspy_name_id: str):
     """
     CLI to generate Qiskit programs based on a MorphQ template and save them to files.
     """
@@ -327,7 +339,7 @@ def main(
     # Set the random seed if provided
     if seed is not None:
         random.seed(seed)
-        console.log(f"Random seed set to: {seed}")
+    console.log(f"Random seed set to: {seed}")
 
     # Generate the output folder based on the current date and time
     output_path = generate_output_folder(
@@ -338,6 +350,10 @@ def main(
     # Load the Jinja template
     template = load_jinja_template(template_path=prompt)
 
+    import dspy
+    lm = dspy.LM(model_dspy_name_id, cache=False)
+    dspy.configure(lm=lm)
+
     # Generate the circuit code
     generation_strategy = get_generation_strategy(
         strategy_name=circuit_generation_strategy,
@@ -345,7 +361,8 @@ def main(
         max_n_gates=max_n_gates,
         seed_program_folder=seed_program_folder,
         path_to_documentation=path_to_documentation,
-        api_file=api_file
+        api_file=api_file,
+        migration_dir=migration_dir
     )
     for i in range(max_n_programs):
         qc_circuit_source = generation_strategy.generate()

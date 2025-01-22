@@ -1,0 +1,20 @@
+# v021: Condition the generation of the program using a specific Qiskit v1.2.0 API
+
+# Changelog
+# - like v018
+# - summarize migration with NotebookLM
+
+commands:
+  - module: generators.morphq_like_w_oracles
+    arguments:
+      prompt: generators/scaffold_oracles_any_circuit_var.jinja
+      output_folder: program_bank/v021/
+      circuit_generation_strategy: "llm_api_with_migration"
+      max_n_programs: 300
+      perform_execution: False
+      model_dspy_name_id: gemini/gemini-1.5-flash
+
+      # path_to_documentation: generators/strategies/docs_artifacts/qiskit_std.md
+      # seed_program_folder: data/circuit_fragments
+      api_file: aiexchange/knowledge_base/api_database_1.2.0/entities.json
+      migration_dir: aiexchange/knowledge_base/migration_doc/v002
