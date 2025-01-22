@@ -165,21 +165,21 @@ def test_oracle_comparator(
         mock_get_copy_of_all_circuits_vars, mock_get_functions):
     """Test oracle_comparator function when comparison raises an exception."""
 
-    output_dir = "/tmp/optimizer_test/"
-    os.makedirs(output_dir, exist_ok=True)
-    # with tempfile.TemporaryDirectory() as output_dir:
-    oracle_exporter(output_dir)
-    oracle_optimizer(output_dir)
-    oracle_comparator(output_dir)
+    # output_dir = "/tmp/optimizer_test/"
+    # os.makedirs(output_dir, exist_ok=True)
+    with tempfile.TemporaryDirectory() as output_dir:
+        oracle_exporter(output_dir)
+        oracle_optimizer(output_dir)
+        oracle_comparator(output_dir)
 
-    # check that there is a comparison file in the temp directory
-    assert len(list(Path(output_dir).glob('*.json'))
-               ) > 0, "No comparison files exported."
+        # check that there is a comparison file in the temp directory
+        assert len(list(Path(output_dir).glob('*.json'))
+                   ) > 0, "No comparison files exported."
 
-    # print the comparison files
-    for comparison_file in Path(output_dir).glob('*'):
-        print("-" * 80)
-        print(comparison_file)
-        print("-" * 80)
-        print(comparison_file.read_text())
-        print("=" * 80)
+        # print the comparison files
+        for comparison_file in Path(output_dir).glob('*'):
+            print("-" * 80)
+            print(comparison_file)
+            print("-" * 80)
+            print(comparison_file.read_text())
+            print("=" * 80)
