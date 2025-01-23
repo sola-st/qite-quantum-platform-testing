@@ -1,0 +1,11 @@
+{
+    "exception_message": "Cannot obtain matrix from op: Unitary1qBox",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/0001793_697371.py\", line 520, in oracle_optimizer\n    qasm_file = platform_specific_optimize_call(\n  File \"/workspace/0001793_697371.py\", line 303, in optimize_with_pytket\n    optimization_pass.apply(i_qc)\nRuntimeError: Cannot obtain matrix from op: Unitary1qBox\n",
+    "current_file": "0001793_697371.py",
+    "involved_functions": [
+        "qiskit_to_tk",
+        "optimize_with_pytket"
+    ],
+    "timestamp": 1737648259.106081,
+    "extra_info": null
+}

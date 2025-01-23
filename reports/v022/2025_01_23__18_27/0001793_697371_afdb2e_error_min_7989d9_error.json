@@ -1,0 +1,11 @@
+{
+    "exception_message": "Operation MidMeasureMP not supported by the QASM serializer",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/usr/local/lib/python3.10/site-packages/pennylane/tape/qscript.py\", line 1178, in to_openqasm\n    gate = OPENQASM_GATES[op.name]\nKeyError: 'MidMeasureMP'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/workspace/0001793_697371_afdb2e_error_min.py\", line 265, in oracle_optimizer\n    qasm_file = platform_specific_optimize_call(\n  File \"/workspace/0001793_697371_afdb2e_error_min.py\", line 61, in optimize_with_pennylane\n    qasm_str_pennylane = optimized_circuit_qnode.tape.to_openqasm(wires\n  File \"/usr/local/lib/python3.10/site-packages/pennylane/tape/qscript.py\", line 1180, in to_openqasm\n    raise ValueError(f\"Operation {op.name} not supported by the QASM serializer\") from e\nValueError: Operation MidMeasureMP not supported by the QASM serializer\n",
+    "current_file": "0001793_697371_afdb2e_error_min.py",
+    "involved_functions": [
+        "from_qiskit",
+        "optimize_with_pennylane"
+    ],
+    "timestamp": 1737653343.144712,
+    "extra_info": null
+}
