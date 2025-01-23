@@ -13,7 +13,7 @@ commands:
       circuit_generation_strategy: "random"
       max_n_qubits: 11
       max_n_gates: 5
-      max_n_programs: 3
+      max_n_programs: 10000
       perform_execution: False
 
       active_oracles:
