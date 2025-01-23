@@ -1,0 +1,15 @@
+{
+    "exception_message": "Gate acts on 5 qubits, got 4 qubit variables.",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/0001104_1b7227.py\", line 551, in oracle_importer\n    parsed_qc = parser_call(str(qasm_file))\n  File \"/workspace/0001104_1b7227.py\", line 166, in import_from_qasm_with_bqskit\n    bqskit_circuit = Circuit.from_file(file_path)\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/circuit.py\", line 3258, in from_file\n    return language.decode(f.read())\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/lang/qasm2/qasm2.py\", line 37, in decode\n    visitor.visit_topdown(tree)\n  File \"/usr/local/lib/python3.10/site-packages/lark/visitors.py\", line 371, in visit_topdown\n    self._call_userfunc(subtree)\n  File \"/usr/local/lib/python3.10/site-packages/lark/visitors.py\", line 343, in _call_userfunc\n    return getattr(self, tree.data, self.__default__)(tree)\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/lang/qasm2/visitor.py\", line 312, in gate\n    raise LangException(\nbqskit.ir.lang.language.LangException: Gate acts on 5 qubits, got 4 qubit variables.\n",
+    "current_file": "0001104_1b7227.py",
+    "involved_functions": [
+        "import_from_qasm_with_bqskit"
+    ],
+    "timestamp": 1737642352.9113538,
+    "extra_info": {
+        "input_qasm_file": "0001104_1b7227_qc_RemoveRedundancies_pytket.qasm",
+        "platform_generating_programs": [
+            "pytket"
+        ]
+    }
+}
