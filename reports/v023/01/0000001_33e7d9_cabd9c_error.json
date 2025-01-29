@@ -1,0 +1,14 @@
+{
+    "exception_message": "Operation MidMeasureMP not supported by the QASM serializer",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/usr/local/lib/python3.10/site-packages/pennylane/tape/qscript.py\", line 1178, in to_openqasm\n    gate = OPENQASM_GATES[op.name]\nKeyError: 'MidMeasureMP'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/workspace/0000001_33e7d9.py\", line 741, in oracle_chain\n    new_qasm_file = exporter_call(\n  File \"/workspace/0000001_33e7d9.py\", line 154, in export_to_qasm_from_proprietary_ir_pennylane\n    qasm_str_pennylane = qs.to_openqasm()\n  File \"/usr/local/lib/python3.10/site-packages/pennylane/tape/qscript.py\", line 1180, in to_openqasm\n    raise ValueError(f\"Operation {op.name} not supported by the QASM serializer\") from e\nValueError: Operation MidMeasureMP not supported by the QASM serializer\n",
+    "current_file": "0000001_33e7d9.py",
+    "involved_functions": [
+        "import_from_qasm_with_pennylane",
+        "export_to_qasm_from_proprietary_ir_pennylane"
+    ],
+    "timestamp": 1738167516.3690856,
+    "extra_info": {
+        "input_qasm_file": "0000001_33e7d9_qc_pennylane_qiskit.qasm",
+        "iteration": 1
+    }
+}
