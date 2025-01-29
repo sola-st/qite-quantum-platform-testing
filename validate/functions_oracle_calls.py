@@ -242,6 +242,135 @@ def oracle_comparator(input_dir: str = None) -> None:
                     extra_info=extra_info,
                     output_dir=input_dir)
 
+
+def get_all_string_values_from_dict(dictionary: Dict[str, Any]) -> List[str]:
+    """Iterate the hierarchy of a dictionary and return all string values.
+
+    Consider only the leaf values of the dictionary.
+    """
+    all_string_values = []
+    for key, value in dictionary.items():
+        if isinstance(value, dict):
+            all_string_values.extend(get_all_string_values_from_dict(value))
+        elif isinstance(value, str):
+            all_string_values.append(value)
+    return all_string_values
+
+
+def get_all_qasm_files(metadata_dict: Dict[str, Any]) -> List[str]:
+    """Extract all QASM files from a metadata dictionary."""
+    all_string_values = get_all_string_values_from_dict(metadata_dict)
+    qasm_files = [
+        value for value in all_string_values if value.endswith(".qasm")]
+    return qasm_files
+
+
+def get_reliable_qasm_files(
+        input_dir: str,
+        max_errors_allowed: int = 4,
+        suffix_exception_files: str = "*_error.json") -> List[str]:
+    """Filter all the QASM that are involved in less than N exceptions."""
+    dir_w_files = Path(input_dir)
+
+    error_files = list(dir_w_files.glob(suffix_exception_files))
+    error_metadata = [
+        json.loads(error_file.read_text())
+        for error_file in error_files
+    ]
+    involved_qasm_files = [
+        get_all_qasm_files(metadata_dict)
+        for metadata_dict in error_metadata]
+    erroneous_qasm_files = [
+        qasm_file for sublist in involved_qasm_files
+        for qasm_file in sublist]
+    qasm_with_too_many_errors = [
+        qasm_file for qasm_file in set(erroneous_qasm_files)
+        if erroneous_qasm_files.count(qasm_file) > max_errors_allowed]
+    all_qasm_files = list(dir_w_files.glob("*.qasm"))
+    reliable_qasm_files = [
+        qasm_file for qasm_file in all_qasm_files
+        if qasm_file.name not in qasm_with_too_many_errors]
+    return [str(qasm_file) for qasm_file in reliable_qasm_files]
+
+
+def oracle_chain(input_dir: str = None):
+    """Run all import-export functions in a chain.
+
+    Args:
+        input_dir (str): The directory where the QASM files are stored.
+    """
+    n_iterations: int = 3
+
+    parser_calls = get_functions(prefix="import_from_qasm_with_")
+    export_ir_calls = get_functions(
+        prefix="export_to_qasm_from_proprietary_ir_")
+
+    if input_dir:
+        dir_w_files = Path(input_dir)
+    else:
+        dir_w_files = Path(".")
+
+    qasm_expanded = []
+
+    for i in range(n_iterations):
+        reliable_qasm_files: List[str] = get_reliable_qasm_files(
+            input_dir=dir_w_files)
+        qasm_to_expand = set(reliable_qasm_files) - set(qasm_expanded)
+
+        for qasm_file in qasm_to_expand:
+            for platform, parser_call in parser_calls.items():
+                # 1. Import QASM
+                try:
+                    print(f"Importing QASM for {platform}")
+                    parsed_qc = parser_call(str(qasm_file))
+                except Exception as e:
+                    stack_trace = traceback.format_exc()
+                    involved_functions = [parser_call.__name__]
+                    extra_info = {
+                        "input_qasm_file": str(qasm_file),
+                        "iteration": i,
+                    }
+                    platform_generating_programs = [
+                        pname for pname in parser_calls.keys()
+                        if pname in Path(qasm_file).stem]
+                    if len(platform_generating_programs) > 0:
+                        extra_info["platform_generating_programs"] = platform_generating_programs
+                    log_exception_to_json(
+                        e, stack_trace, involved_functions,
+                        extra_info=extra_info,
+                        output_dir=input_dir)
+                    continue
+
+                # 2. Optimize
+                # SKIP - OPTIONAL
+
+                # 3. Export QASM
+                print(f"Exporting QASM for {platform}")
+                exporter_call = export_ir_calls.get(platform, None)
+                if not exporter_call:
+                    continue
+                try:
+                    new_qasm_file = exporter_call(
+                        parsed_qc,
+                        base_name=Path(qasm_file).stem,
+                        abs_output_file=None)
+                except Exception as e:
+                    stack_trace = traceback.format_exc()
+                    involved_functions = [
+                        parser_call.__name__,
+                        exporter_call.__name__]
+                    extra_info = {
+                        "input_qasm_file": str(qasm_file),
+                        "iteration": i,
+                    }
+                    log_exception_to_json(
+                        e, stack_trace, involved_functions,
+                        extra_info=extra_info,
+                        output_dir=input_dir)
+
+            qasm_expanded.append(str(qasm_file))
+
+
 # def oracle_call() -> None:
 
 #     all_circuits_vars = get_copy_of_all_circuits_vars()

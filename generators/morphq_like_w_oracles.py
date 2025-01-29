@@ -384,6 +384,10 @@ def main(
         # get export functions
         export_functions_section = get_source_code_functions_w_prefix(
             prefix='export_to_qasm_with_', module=export_functions)
+        export_ir_functions_section = get_source_code_functions_w_prefix(
+            prefix='export_to_qasm_from_proprietary_ir_',
+            module=export_functions)
+        export_functions_section += "\n" + export_ir_functions_section
 
         # get import functions
         import_functions_section = get_source_code_functions_w_prefix(

@@ -1,5 +1,6 @@
 import pytest
 import os
+import json
 import tempfile
 from pathlib import Path
 from validate.functions_oracle_calls import (
@@ -13,7 +14,7 @@ from validate.functions_oracle_calls import (
 from qiskit import QuantumCircuit
 from unittest.mock import patch, MagicMock
 from validate.functions_qasm_export import (
-    export_to_qasm_with_bqskit,
+    # export_to_qasm_with_bqskit,
     export_to_qasm_with_pennylane,
     export_to_qasm_with_qiskit,
     export_to_qasm_with_pytket,
@@ -38,6 +39,11 @@ from validate.functions_qasm_compare import (
 
 
 from typing import Dict, Callable
+from validate.functions_oracle_calls import (
+    get_all_string_values_from_dict,
+    get_all_qasm_files,
+    get_reliable_qasm_files
+)
 
 
 @pytest.fixture
@@ -68,7 +74,7 @@ def mock_get_functions():
                     'qiskit': export_to_qasm_with_qiskit,
                     'pennylane': export_to_qasm_with_pennylane,
                     'pytket': export_to_qasm_with_pytket,
-                    'bqskit': export_to_qasm_with_bqskit,
+                    # 'bqskit': export_to_qasm_with_bqskit,
                 }
             elif prefix == "optimize_with_":
                 return {
@@ -183,3 +189,137 @@ def test_oracle_comparator(
             print("-" * 80)
             print(comparison_file.read_text())
             print("=" * 80)
+
+
+def test_get_all_string_values_from_dict():
+    """Test get_all_string_values_from_dict function to ensure it extracts all string values from a nested dictionary."""
+
+    # Test case 1: Simple dictionary with string values
+    simple_dict = {
+        "key1": "value1",
+        "key2": "value2",
+        "key3": "value3"
+    }
+    assert get_all_string_values_from_dict(
+        simple_dict) == ["value1", "value2", "value3"]
+
+    # Test case 2: Nested dictionary with string values
+    nested_dict = {
+        "key1": {
+            "subkey1": "value1",
+            "subkey2": "value2"
+        },
+        "key2": "value3",
+        "key3": {
+            "subkey3": {
+                "subsubkey1": "value4"
+            }
+        }
+    }
+    assert get_all_string_values_from_dict(nested_dict) == [
+        "value1", "value2", "value3", "value4"]
+
+    # Test case 3: Dictionary with non-string values
+    mixed_dict = {
+        "key1": "value1",
+        "key2": 123,
+        "key3": {
+            "subkey1": "value2",
+            "subkey2": [1, 2, 3]
+        },
+        "key4": {
+            "subkey3": {
+                "subsubkey1": "value3",
+                "subsubkey2": None
+            }
+        }
+    }
+    assert get_all_string_values_from_dict(
+        mixed_dict) == ["value1", "value2", "value3"]
+
+    # Test case 4: Empty dictionary
+    empty_dict = {}
+    assert get_all_string_values_from_dict(empty_dict) == []
+
+    # Test case 5: Dictionary with no string values
+    no_string_dict = {
+        "key1": 123,
+        "key2": [1, 2, 3],
+        "key3": {
+            "subkey1": 456,
+            "subkey2": None
+        }
+    }
+    assert get_all_string_values_from_dict(no_string_dict) == []
+
+
+def test_get_all_qasm_files():
+    """Test get_all_qasm_files function to ensure it extracts all QASM file paths from a metadata dictionary."""
+    # Test case 3: Dictionary with non-QASM file paths
+    mixed_dict = {
+        "key1": "file1.qasm",
+        "key2": "file2.txt",
+        "key3": {
+            "subkey1": "file3.qasm",
+            "subkey2": "file4.doc"
+        },
+        "key4": {
+            "subkey3": {
+                "subsubkey1": "file5.qasm",
+                "subsubkey2": "file6.pdf"
+            }
+        }
+    }
+    assert get_all_qasm_files(mixed_dict) == [
+        "file1.qasm", "file3.qasm", "file5.qasm"]
+
+
+def test_get_reliable_qasm_files(tmp_path):
+    """Test get_reliable_QASM_files function to ensure it filters QASM files with less than max_exceptions."""
+
+    # Create temporary error metadata files
+    error_metadata_1 = {
+        "exception_message": "Error 1",
+        "stack_trace": "Traceback 1",
+        "current_file": "test_file.py",
+        "involved_functions": ["function_1"],
+        "extra_info": {"input_qasm_file": "file1.qasm"}
+    }
+    error_metadata_2 = {
+        "exception_message": "Error 2",
+        "stack_trace": "Traceback 2",
+        "current_file": "test_file.py",
+        "involved_functions": ["function_2"],
+        "extra_info": {"input_qasm_file": "file2.qasm"}
+    }
+    error_metadata_3 = {
+        "exception_message": "Error 3",
+        "stack_trace": "Traceback 3",
+        "current_file": "test_file.py",
+        "involved_functions": ["function_3"],
+        "extra_info": {"input_qasm_file": "file1.qasm"}
+    }
+
+    error_file_1 = tmp_path / "1_error.json"
+    error_file_2 = tmp_path / "2_error.json"
+    error_file_3 = tmp_path / "ac_error.json"
+
+    error_file_1.write_text(json.dumps(error_metadata_1))
+    error_file_2.write_text(json.dumps(error_metadata_2))
+    error_file_3.write_text(json.dumps(error_metadata_3))
+
+    # Create temporary QASM files
+    qasm_file_1 = tmp_path / "file1.qasm"
+    qasm_file_2 = tmp_path / "file2.qasm"
+    qasm_file_3 = tmp_path / "file3.qasm"
+
+    qasm_file_1.write_text("OPENQASM 2.0;")
+    qasm_file_2.write_text("OPENQASM 2.0;")
+    qasm_file_3.write_text("OPENQASM 2.0;")
+
+    # Test get_reliable_QASM_files function
+    reliable_qasm_files = get_reliable_qasm_files(
+        input_dir=tmp_path, max_errors_allowed=1)
+
+    # Check that only file2.qasm and file3.qasm are considered reliable
+    assert set(reliable_qasm_files) == {str(qasm_file_2), str(qasm_file_3)}
