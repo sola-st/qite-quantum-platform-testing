@@ -1,11 +1,13 @@
 
 import docker
+import json
 from pathlib import Path
 from typing import Tuple, List, Union
 import subprocess
 import threading
 import tempfile
 import shutil
+from validate.functions_oracle_calls import get_all_qasm_files
 
 
 def _execute_in_docker(
@@ -87,15 +89,39 @@ def run_program_in_docker_w_timeout(
             print(f"Execution timed out after {timeout} seconds.")
 
 
+def get_qasm_files_involved_in_error(output_dir: str) -> List[str]:
+    """Get all the qasm files that are involved in the error.
+
+    Error files end in _error.json.
+    """
+    error_metadata = [
+        json.loads(filepath.read_text())
+        for filepath in Path(output_dir).glob("*_error.json")]
+    qasm_files = []
+    for metadata in error_metadata:
+        qasm_files.extend(get_all_qasm_files(metadata))
+    return qasm_files
+
+
 def run_program_in_docker_pypi(
         folder_with_file: Path, file_name: str, timeout: int = 60, console=None,
         collect_coverage: bool = False,
         packages: List[str] = ["/usr/local/lib/python3.10/site-packages/qiskit"],
         output_folder_coverage: str = None,
-        ignore_every_other_file_in_folder: bool = False) -> None:
+        ignore_every_other_file_in_folder: bool = False,
+        copy_back_only_relevant_qasm_files: bool = False) -> None:
     """Runs the generated program in a Docker container with a timeout.
 
-    It uses the pypi docker package to run the program in a container and get its container id to stop it if it times out.
+    It uses the pypi docker package to run the program in a container and get
+    its container id to stop it if it times out.
+
+    Args:
+        - ignore_every_other_file_in_folder: If True, only the file_name file
+          is copied to a temporary directory.
+        - copy_back_only_relevant_qasm_files: If True, only the qasm files that
+          appear in some error logs or are ancestors of those files are copied
+          from the docker container to the host. Note that this is only
+          used in the case of ignore_every_other_file_in_folder=True.
     """
     client = docker.from_env()
     if ignore_every_other_file_in_folder:
@@ -184,9 +210,22 @@ def run_program_in_docker_pypi(
         if timer and timer.is_alive():
             timer.cancel()
         if ignore_every_other_file_in_folder:
+            error_causing_qasm_files = get_qasm_files_involved_in_error(
+                output_dir=str(path_temp_dir))
             # copy all new files to the original folder
             for file in path_temp_dir.iterdir():
                 if file.is_file():
-                    shutil.copy(file, old_folder_with_file)
+                    if copy_back_only_relevant_qasm_files:
+                        # keep only files that are:
+                        # - error file
+                        # - are prefix of any qasm file involved in the error
+                        if any(
+                            str(qasm_file).startswith(str(Path(file).stem))
+                            for qasm_file in error_causing_qasm_files
+                        ) or str(file).endswith("_error.json"):
+                            shutil.copy(file, old_folder_with_file)
+                    else:
+                        # copy anything
+                        shutil.copy(file, old_folder_with_file)
             # remove the temporary directory
             temp_dir.cleanup()

@@ -5,6 +5,7 @@
 # - support chain oracle
 # - skip often erroneous QASM
 # - disable every BQSKit exporter
+# - add final measurement flag
 
 commands:
   - module: generators.morphq_like_w_oracles
@@ -14,6 +15,8 @@ commands:
       circuit_generation_strategy: "random"
       max_n_qubits: 11
       max_n_gates: 5
+      add_final_meas: False
+
       max_n_programs: 3
       perform_execution: False
 
@@ -21,6 +24,7 @@ commands:
         - oracle_exporter
         - oracle_optimizer
         - oracle_chain
+        - oracle_comparator
 
       # path_to_documentation: generators/strategies/docs_artifacts/qiskit_std.md
       # seed_program_folder: data/circuit_fragments

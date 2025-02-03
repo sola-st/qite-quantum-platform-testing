@@ -299,7 +299,7 @@ def oracle_chain(input_dir: str = None):
     Args:
         input_dir (str): The directory where the QASM files are stored.
     """
-    n_iterations: int = 3
+    n_iterations: int = 1
 
     parser_calls = get_functions(prefix="import_from_qasm_with_")
     export_ir_calls = get_functions(
@@ -319,6 +319,11 @@ def oracle_chain(input_dir: str = None):
 
         for qasm_file in qasm_to_expand:
             for platform, parser_call in parser_calls.items():
+                output_file = Path(qasm_file).with_name(
+                    f"{Path(qasm_file).stem}_{platform}.qasm")
+                # skip if the output file already exists
+                if output_file.exists():
+                    continue
                 # 1. Import QASM
                 try:
                     print(f"Importing QASM for {platform}")

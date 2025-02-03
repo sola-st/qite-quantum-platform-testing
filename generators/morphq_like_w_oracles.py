@@ -143,9 +143,11 @@ def load_jinja_template(template_path: Path) -> Template:
 class RandomGenerationStrategy(GenerationStrategy):
     """Random generation strategy for Qiskit circuits."""
 
-    def __init__(self, max_n_qubits: int, max_n_gates: int, *args, **kwargs):
+    def __init__(self, max_n_qubits: int, max_n_gates: int,
+                 add_final_meas: bool = True, *args, **kwargs):
         self.max_n_qubits = max_n_qubits
         self.max_n_gates = max_n_gates
+        self.add_final_meas = add_final_meas
 
     def generate(self) -> str:
         """Generates gate operations using Qiskit gate generator."""
@@ -158,7 +160,10 @@ class RandomGenerationStrategy(GenerationStrategy):
             num_statements=self.max_n_gates
         )
         current_file_folder = Path(__file__).parent
-        circuit_template = current_file_folder / 'circuit_random_ops.jinja'
+        template_file = 'circuit_random_ops.jinja' \
+            if self.add_final_meas \
+            else 'circuit_random_ops_no_meas.jinja'
+        circuit_template = current_file_folder / template_file
         with open(circuit_template, 'r') as f:
             template_content = f.read()
         template = Template(template_content)
@@ -264,7 +269,8 @@ def get_generation_strategy(
     elif strategy_name == 'random':
         return RandomGenerationStrategy(
             max_n_qubits=kwargs['max_n_qubits'],
-            max_n_gates=kwargs['max_n_gates']
+            max_n_gates=kwargs['max_n_gates'],
+            add_final_meas=kwargs['add_final_meas']
         )
     elif strategy_name == 'circuit_fragments':
         return CircuitFragmentsGenerationStrategy(
@@ -328,6 +334,8 @@ def get_generation_strategy(
                help="Name of the model in dspy.")
 @ click.option('--active_oracles', multiple=True,
                help="List of active oracles to use in the generated programs.")
+@ click.option('--add_final_meas', is_flag=True, default=True,
+               help="Flag to indicate whether to add final measurement.")
 def main(
         output_folder: str, prompt: Path, circuit_generation_strategy: str,
         max_n_qubits: int, max_n_gates: int, max_n_programs: int,
@@ -337,7 +345,8 @@ def main(
         api_file: Optional[Path],
         migration_dir: Optional[Path],
         model_dspy_name_id: str,
-        active_oracles: List[str]
+        active_oracles: List[str],
+        add_final_meas: bool
 ):
     """
     CLI to generate Qiskit programs based on a MorphQ template and save them to files.
@@ -370,7 +379,8 @@ def main(
         seed_program_folder=seed_program_folder,
         path_to_documentation=path_to_documentation,
         api_file=api_file,
-        migration_dir=migration_dir
+        migration_dir=migration_dir,
+        add_final_meas=add_final_meas
     )
     for i in range(max_n_programs):
         qc_circuit_source = generation_strategy.generate()
@@ -456,7 +466,8 @@ def main(
             file_name=file_name,
             timeout=30,
             console=console,
-            ignore_every_other_file_in_folder=True)
+            ignore_every_other_file_in_folder=True,
+            copy_back_only_relevant_qasm_files=True)
 
     console.log("Qiskit program generation completed.")
 

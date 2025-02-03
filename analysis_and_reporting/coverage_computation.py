@@ -128,6 +128,7 @@ def compute_coverage(
             collect_coverage=True,
             packages=packages,
             output_folder_coverage=str(output_path),
+            ignore_every_other_file_in_folder=True,
         )
         end_time = time.time()
         time_file = output_path / f"{base_name}_time.json"
@@ -219,6 +220,10 @@ def main(
     all_programs = [
         program for program in Path(input_folder).glob("*.py")
     ]
+    # exclude circuit programs
+    circuit_programs = [
+        program for program in Path(input_folder).glob("*_circuit.py")]
+    all_programs = list(set(all_programs) - set(circuit_programs))
 
     output_path = Path(output_folder)
     subfolders = create_subfolder_per_process(output_path, n_processes)
