@@ -8,6 +8,8 @@ from rich.console import Console
 from uuid import uuid4
 from datetime import datetime
 import yaml
+import math
+from typing import Callable
 
 # qasm_code_gen.py
 
@@ -17,13 +19,15 @@ class Gate:
     name: str
     num_qubits: int
     num_params: int = 0
+    sanitize_params: Callable = lambda x: x
 
     def to_qasm(self, qreg_name: str, circuit_size: int) -> str:
         qubits = random.sample(range(circuit_size), self.num_qubits)
         qubit_str = ",".join(f"{qreg_name}[{q}]" for q in qubits)
         if self.num_params > 0:
-            params = [random.uniform(0, 2 * math.pi)
-                      for _ in range(self.num_params)]
+            params = [
+                self.sanitize_params(random.uniform(0, 2 * math.pi))
+                for _ in range(self.num_params)]
             param_str = ",".join(map(str, params))
             return f"{self.name}({param_str}) {qubit_str};"
         else:
@@ -57,7 +61,7 @@ class ID(Gate):
 
 class U0(Gate):
     def __init__(self):
-        super().__init__("u0", 1, 1)
+        super().__init__("u0", 1, 1, lambda x: math.ceil(x))
 
 
 class U(Gate):
