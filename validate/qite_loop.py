@@ -8,11 +8,10 @@ from validate.qiskit_processor import (
     QiskitChangeGateSetU3CX, QiskitOptimizerLevel2
 )
 from qite.transforms.pytket_transforms import list_pytket_transformers
+from qite.transforms.pennylane_transforms import list_pennylane_transformers
 from validate.pytket_processor import PytketProcessor
-from validate.pennylane_processor import (
-    PennyLaneProcessor,
-    PennyLaneOptimizer
-)
+from validate.pennylane_processor import PennyLaneProcessor
+import signal
 from validate.bqskit_processor import (
     BQSKitProcessor,
     BQSKitOptimizer
@@ -66,7 +65,7 @@ console = Console(color_system=None)
 def apply_qite_algorithm(input_folder: str, number_of_rounds: int,
                          n_transform_iter: int) -> None:
     input_path = Path(input_folder)
-    qasm_files = list(input_path.glob("*.qasm"))
+    qasm_files = sorted(list(input_path.glob("*.qasm")))
 
     for round_num in range(number_of_rounds):
         console.log(f"Round {round_num + 1}/{number_of_rounds}")
@@ -85,38 +84,44 @@ def process_qasm_file(qasm_file: Path, n_transform_iter: int) -> None:
     processors = []
 
     # PLATFORM: QISKIT
-    processor = QiskitProcessor(
-        metadata_folder=metadata_folder,
-        error_folder=error_folder,
-        output_folder=qasm_file.parent
-    )
-    processor.add_transformer(QiskitChangeGateSetU3CX())
-    processor.add_transformer(QiskitOptimizerLevel2())
-    processors.append(processor)
+    # processor = QiskitProcessor(
+    #     metadata_folder=metadata_folder,
+    #     error_folder=error_folder,
+    #     output_folder=qasm_file.parent
+    # )
+    # processor.add_transformer(QiskitChangeGateSetU3CX())
+    # processor.add_transformer(QiskitOptimizerLevel2())
+    # processors.append(processor)
 
     # PLATFORM: PYTKET
-    processor = PytketProcessor(
+    # processor = PytketProcessor(
+    #     metadata_folder=metadata_folder,
+    #     error_folder=error_folder,
+    #     output_folder=qasm_file.parent
+    # )
+    # selected_transformers = (
+    #     random.sample(list_pytket_transformers, n_transform_iter)
+    #     if n_transform_iter < len(list_pytket_transformers)
+    #     else list_pytket_transformers
+    # )
+    # for transformer in selected_transformers:
+    #     processor.add_transformer(transformer)
+    # processors.append(processor)
+
+    # PLATFORM: PENNYLANE
+    processor = PennyLaneProcessor(
         metadata_folder=metadata_folder,
         error_folder=error_folder,
         output_folder=qasm_file.parent
     )
     selected_transformers = (
-        random.sample(list_pytket_transformers, n_transform_iter)
-        if n_transform_iter < len(list_pytket_transformers)
-        else list_pytket_transformers
+        random.sample(list_pennylane_transformers, n_transform_iter)
+        if n_transform_iter < len(list_pennylane_transformers)
+        else list_pennylane_transformers
     )
     for transformer in selected_transformers:
         processor.add_transformer(transformer)
     processors.append(processor)
-
-    # # PLATFORM: PENNYLANE
-    # processor = PennyLaneProcessor(
-    #     metadata_folder=metadata_folder,
-    #     error_folder=error_folder,
-    #     output_folder=qasm_file.parent
-    # )
-    # processor.add_transformer(PennyLaneOptimizer())
-    # processors.append(processor)
 
     # # PLATFORM: BQSKIT
     # processor = BQSKitProcessor(
@@ -131,7 +136,16 @@ def process_qasm_file(qasm_file: Path, n_transform_iter: int) -> None:
     processor = random.choice(processors)
 
     try:
-        final_path = processor.execute_qite_loop(str(qasm_file))
+        def handler(signum, frame):
+            raise TimeoutError("Processing timed out")
+
+        signal.signal(signal.SIGALRM, handler)
+        signal.alarm(10)  # Set the timeout to 60 seconds
+
+        try:
+            final_path = processor.execute_qite_loop(str(qasm_file))
+        finally:
+            signal.alarm(0)  # Disable the alarm
         # console.log(
         #     f"Processed {qasm_file} successfully. Output: {final_path}")
     except Exception as e:
