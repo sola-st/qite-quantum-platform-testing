@@ -101,8 +101,15 @@ console = Console()
 
 def load_config(config_file: Path) -> Dict[str, Any]:
     """Load the YAML configuration file."""
-    with config_file.open('r') as f:
-        return yaml.safe_load(f)
+    # replace the keywords:
+    # <<RUN_FOLDER>> -> '%Y_%m_%d__%H_%M'
+    # <<LOG_FOLDER>> -> 'logs'
+
+    raw_config = config_file.read_text()
+    raw_config = raw_config.replace(
+        '<<RUN_FOLDER>>', datetime.datetime.now().strftime('%Y_%m_%d__%H_%M'))
+
+    return yaml.safe_load(raw_config)
 
 
 def create_log_file(config_file: Path) -> Path:
