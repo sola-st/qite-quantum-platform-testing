@@ -1,0 +1,28 @@
+# v024: Generation with QASM generator
+
+
+commands:
+  - module: generators.qasm_code_gen
+    arguments:
+      num_qubits: 11
+      num_gates: 15
+      # seed: 42
+      final_measure: False
+      num_programs: 3
+      output_dir: program_bank/v024/run005
+    config:
+      gate_set: [
+        'h', 'x', 'y', 'z', 'cx', 'cz', 'rx', 'ry', 'rz', 's', 't', 'tdg',
+        'sdg', 'swap', 'ccx', 'cswap', 'crz',
+        'u3', 'u2', 'u1', 'cx', 'id', 'u0', 'u', 'p', 'x', 'y', 'z', 'h',
+        's', 'sdg', 't', 'tdg', 'rx', 'ry', 'rz', 'sx', 'sxdg', 'cz', 'cy',
+        'swap', 'ch', 'ccx', 'cswap', 'crx', 'cry', 'crz', 'cu1', 'cp',
+        'cu3', 'csx', 'cu', 'rxx', 'rzz', 'rccx', 'rc3x', 'c3x', 'c3sqrtx',
+        'c4x']
+
+
+  - module: validate.qite_loop
+    arguments:
+      input_folder: program_bank/v024/run005
+      number_of_rounds: 1
+
