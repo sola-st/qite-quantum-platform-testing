@@ -2,15 +2,12 @@ from validate.qiskit_processor import (
     QiskitChangeGateSetU3CX, QiskitOptimizerLevel2
 )
 
-from validate.pytket_processor import (
-    PytketOptimizerPeephole
-)
-
+from qite.transforms.pytket_transforms import list_pytket_transformers
 
 all_transform_ops = [
     QiskitChangeGateSetU3CX(),
     QiskitOptimizerLevel2(),
-    PytketOptimizerPeephole()
+    *list_pytket_transformers
 ]
 
 transform_lookup = {

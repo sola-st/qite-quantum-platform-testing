@@ -3,7 +3,6 @@ from pytket.extensions.qiskit import qiskit_to_tk, tk_to_qiskit
 from pytket.qasm import (
     circuit_from_qasm_str, circuit_to_qasm_str
 )
-from pytket.passes import FullPeepholeOptimise
 from validate.platform_processor import (
     PlatformProcessor, Importer, Transformer, Exporter
 )
@@ -30,25 +29,6 @@ class PytketImporter(Importer):
             return tk_circuit
         except Exception as e:
             raise e
-
-
-class PytketOptimizerPeephole(Transformer):
-    def __init__(self):
-        super().__init__("pytket_optimizer")
-
-    def transform(self, tk_circuit):
-        FullPeepholeOptimise().apply(tk_circuit)
-        return tk_circuit
-
-
-class PytketChangeGateSet(Transformer):
-    def __init__(self):
-        super().__init__("change_gateset")
-
-    def transform(self, tk_circuit):
-        # Assuming the gate set change is handled by some optimization pass
-        # Here we just return the circuit as is
-        return tk_circuit
 
 
 class PytketExporter(Exporter):

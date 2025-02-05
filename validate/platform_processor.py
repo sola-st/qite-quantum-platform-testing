@@ -115,8 +115,8 @@ logger.setLevel(logging.INFO)
 
 # Create console handler and set level to debug
 ch = logging.StreamHandler()
-# ch.setLevel(logging.CRITICAL)
-ch.setLevel(logging.INFO)
+ch.setLevel(logging.CRITICAL)
+# ch.setLevel(logging.INFO)
 
 # Create formatter
 formatter = logging.Formatter(
