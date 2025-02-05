@@ -49,4 +49,12 @@ To replay the results of a QITE loop on a specific error `0000005_33b7d0_50615d_
 python -m qite.qite_replay --metadata_path program_bank/v024/run006/error/0000005_33b7d0_50615d_error.json --input_folder program_bank/v024/run006 --output_debug_folder program_bank/v024/run006/debug
 ```
 
+```
+python -m qite.qite_replay --metadata_path program_bank/v024/2025_02_05__17_57/error/0000012_109bc1_65b230_error.json --input_folder program_bank/v024/2025_02_05__17_57 --output_debug_folder program_bank/v024/2025_02_05__17_57/debug
+```
 
+To minimize the error run this command:
+
+```bash
+python -m qite.delta_debugging --error_json program_bank/v024/2025_02_05__17_57/error/0000012_109bc1_65b230_error.json --output_folder program_bank/v024/2025_02_05__17_57/minimized --input_folder program_bank/v024/2025_02_05__17_57
+```

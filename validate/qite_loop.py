@@ -7,10 +7,8 @@ from validate.qiskit_processor import (
     QiskitProcessor,
     QiskitChangeGateSetU3CX, QiskitOptimizerLevel2
 )
-from validate.pytket_processor import (
-    PytketProcessor,
-    PytketOptimizerPeephole
-)
+from qite.transforms.pytket_transforms import list_pytket_transformers
+from validate.pytket_processor import PytketProcessor
 from validate.pennylane_processor import (
     PennyLaneProcessor,
     PennyLaneOptimizer
@@ -65,18 +63,20 @@ The goal is to be able to import that function also from other files.
 console = Console(color_system=None)
 
 
-def apply_qite_algorithm(input_folder: str, number_of_rounds: int) -> None:
+def apply_qite_algorithm(input_folder: str, number_of_rounds: int,
+                         n_transform_iter: int) -> None:
     input_path = Path(input_folder)
     qasm_files = list(input_path.glob("*.qasm"))
 
     for round_num in range(number_of_rounds):
         console.log(f"Round {round_num + 1}/{number_of_rounds}")
         for qasm_file in qasm_files:
-            process_qasm_file(qasm_file)
+            process_qasm_file(qasm_file=qasm_file,
+                              n_transform_iter=n_transform_iter)
 
 
-def process_qasm_file(qasm_file: Path) -> None:
-    console.log(f"Processing {qasm_file}")
+def process_qasm_file(qasm_file: Path, n_transform_iter: int) -> None:
+    console.log(f"QITE ({n_transform_iter}) -> {qasm_file}")
     metadata_folder = qasm_file.parent / "metadata"
     error_folder = qasm_file.parent / "error"
     metadata_folder.mkdir(exist_ok=True)
@@ -100,7 +100,13 @@ def process_qasm_file(qasm_file: Path) -> None:
         error_folder=error_folder,
         output_folder=qasm_file.parent
     )
-    processor.add_transformer(PytketOptimizerPeephole())
+    selected_transformers = (
+        random.sample(list_pytket_transformers, n_transform_iter)
+        if n_transform_iter < len(list_pytket_transformers)
+        else list_pytket_transformers
+    )
+    for transformer in selected_transformers:
+        processor.add_transformer(transformer)
     processors.append(processor)
 
     # # PLATFORM: PENNYLANE
@@ -126,8 +132,8 @@ def process_qasm_file(qasm_file: Path) -> None:
 
     try:
         final_path = processor.execute_qite_loop(str(qasm_file))
-        console.log(
-            f"Processed {qasm_file} successfully. Output: {final_path}")
+        # console.log(
+        #     f"Processed {qasm_file} successfully. Output: {final_path}")
     except Exception as e:
         console.log(f"Error processing {qasm_file}: {e}")
 
@@ -137,9 +143,12 @@ def process_qasm_file(qasm_file: Path) -> None:
               help='Folder containing the QASM programs.')
 @click.option('--number_of_rounds', required=True, type=int,
               help='Number of rounds of the QITE algorithm.')
-def main(input_folder: str, number_of_rounds: int) -> None:
+@click.option('--n_transform_iter', required=True, type=int,
+              help='Number of transformation iterations for Pytket.')
+def main(input_folder: str, number_of_rounds: int, n_transform_iter: int) -> None:
     apply_qite_algorithm(input_folder=input_folder,
-                         number_of_rounds=number_of_rounds)
+                         number_of_rounds=number_of_rounds,
+                         n_transform_iter=n_transform_iter)
 
 
 if __name__ == "__main__":
