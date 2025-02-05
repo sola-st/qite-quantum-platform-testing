@@ -40,6 +40,14 @@ output_folder
 ...
 ```
 
+## Explore Errors
+
+To explore the errors found by the QITE loop you can use:
+
+```bash
+python -m qite.explore_warnings --folder_path program_bank/v024/2025_02_05__23_59/error --top_k 3
+```
+
 
 ## Reply Errors
 
