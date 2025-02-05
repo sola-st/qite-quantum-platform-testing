@@ -7,6 +7,14 @@ import time
 import uuid
 from pathlib import Path
 import logging
+from enum import Enum
+
+
+class CrashType(Enum):
+    IMPORTER_CRASH = "importer_crash"
+    EXPORTER_CRASH = "exporter_crash"
+    TRANSFORMER_CRASH = "transformer_crash"
+    GENERIC_CRASH = "generic_crash"
 
 
 class QasmSelector:
@@ -21,8 +29,8 @@ class QasmSelector:
 
 
 class Operation:
-    def __init__(self, op_hash):
-        self.op_hash = op_hash
+    def __init__(self, name):
+        self.name = name
         self.current_status = {}
         self.raise_any_exception = False
 
@@ -41,13 +49,16 @@ class Operation:
             if self.raise_any_exception:
                 raise e
             else:
+                if "'NoneType' object has no attribute 'n_gates_of_type'" in str(e):
+                    breakpoint()
                 self.log_error({
                     "error": str(e),
                     "traceback": traceback.format_exc(),
                     "timestamp": time.time(),
-                    "crashing_operation": self.op_hash,
+                    "crashing_operation": self.name,
                     **self.current_status
                 })
+                return CrashType.GENERIC_CRASH
 
     def log_error(self, error_info):
         uuid_str = uuid.uuid4().hex[:6]
@@ -56,9 +67,6 @@ class Operation:
             f"{self.input_base_qasm_name}_{uuid_str}_error.json")
         with open(log_path, 'w') as f:
             json.dump(error_info, f, indent=4)
-
-    def compute_hash(self):
-        return self.op_hash
 
     def set_exception_handling(self, raise_any_exception: bool):
         self.raise_any_exception = raise_any_exception
@@ -69,8 +77,8 @@ class Operation:
 
 
 class Transformer(Operation):
-    def __init__(self, transformer_hash):
-        super().__init__(transformer_hash)
+    def __init__(self, transformer_name):
+        super().__init__(transformer_name)
 
     def execute(self, qc_obj, *args, **kwargs):
         return self.transform(qc_obj, *args, **kwargs)
@@ -80,8 +88,8 @@ class Transformer(Operation):
 
 
 class Importer(Operation):
-    def __init__(self, importer_hash):
-        super().__init__(importer_hash)
+    def __init__(self, importer_name):
+        super().__init__(importer_name)
 
     def execute(self, path, *args, **kwargs):
         return self.import_qasm(path, *args, **kwargs)
@@ -91,8 +99,8 @@ class Importer(Operation):
 
 
 class Exporter(Operation):
-    def __init__(self, exporter_hash):
-        super().__init__(exporter_hash)
+    def __init__(self, exporter_name):
+        super().__init__(exporter_name)
 
     def execute(self, qc_obj, path, *args, **kwargs):
         return self.export(qc_obj, path, *args, **kwargs)
@@ -107,8 +115,8 @@ logger.setLevel(logging.INFO)
 
 # Create console handler and set level to debug
 ch = logging.StreamHandler()
-ch.setLevel(logging.CRITICAL)
-# ch.setLevel(logging.INFO)
+# ch.setLevel(logging.CRITICAL)
+ch.setLevel(logging.INFO)
 
 # Create formatter
 formatter = logging.Formatter(
@@ -126,6 +134,7 @@ class PlatformProcessor:
         self._importer = None
         self.transformers = []
         self._exporter = None
+        self.name = "base_class_processor"
         self.metadata_folder = metadata_folder
         self.error_folder = error_folder
         self.output_folder = output_folder
@@ -161,7 +170,13 @@ class PlatformProcessor:
 
     def execute_qite_loop(self, qasm_file, raise_any_exception: bool = False):
         logger.info(f"Executing QITE loop with QASM file: {qasm_file}")
-        self.current_status = {"input_qasm": qasm_file}
+        self.current_status = {
+            "input_qasm": qasm_file,
+            "platform": self.name,
+            "importer_function": None,
+            "transformer_functions": [],
+            "exporter_function": None,
+        }
 
         random_id = uuid.uuid4().hex[:6]
         prefix_qasm_file = os.path.basename(qasm_file).split("_")[0]
@@ -174,23 +189,29 @@ class PlatformProcessor:
             metadata_folder=self.metadata_folder,
             error_folder=self.error_folder)
 
+        logger.info(
+            f"current_status: {json.dumps(self.current_status, indent=4)}")
         qc = self._handle_import(qasm_file)
-        if qc is None:
-            logger.info("Import failed, returning None")
+        if isinstance(qc, CrashType):
+            logger.info("Import failed, stopping QITE on this program")
             return None
 
         self.current_status["transformer_functions"] = []
         for transformer in self.transformers:
+            self.current_status["transformer_functions"].append(
+                transformer.name)
             transformer.load_current_status(self.current_status)
             qc = transformer.run(qc)
-            self.current_status["transformer_functions"].append(
-                transformer.compute_hash())
+            if isinstance(qc, CrashType):
+                logger.info(
+                    f"Transfor {transformer} failed, stopping QITE on this program")
+                return None
             logger.info(f"Transformer {transformer} applied")
 
         export_path = self._handle_export(
             qc, exported_filename=qasm_output_filename)
-        if export_path is None:
-            logger.info("Export failed, returning None")
+        if isinstance(export_path, CrashType):
+            logger.info("Export failed, stopping QITE on this program")
             return None
 
         # store provenance metadata
@@ -205,7 +226,7 @@ class PlatformProcessor:
     def _handle_import(self, qasm_file):
         self._importer.load_current_status(self.current_status)
         qc = self._importer.run(qasm_file)
-        self.current_status["importer_function"] = self._importer.op_hash
+        self.current_status["importer_function"] = self._importer.name
         logger.info(f"QASM file imported: {qasm_file}")
         return qc
 
@@ -215,7 +236,7 @@ class PlatformProcessor:
             qc_obj=qc,
             path=self.output_folder,
             filename=exported_filename)
-        self.current_status["exporter_function"] = self._exporter.op_hash
+        self.current_status["exporter_function"] = self._exporter.name
         self.current_status["output_qasm"] = export_path
         logger.info(f"QASM file exported to: {export_path}")
         return export_path

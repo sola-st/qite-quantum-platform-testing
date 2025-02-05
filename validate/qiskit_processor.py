@@ -13,6 +13,7 @@ class QiskitProcessor(PlatformProcessor):
             metadata_folder, error_folder, output_folder)
         self.set_importer(QiskitImporter())
         self.set_exporter(QiskitExporter())
+        self.name = "qiskit"
 
 
 class QiskitImporter(Importer):

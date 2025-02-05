@@ -15,6 +15,7 @@ class PytketProcessor(PlatformProcessor):
             metadata_folder, error_folder, output_folder)
         self.set_importer(PytketImporter())
         self.set_exporter(PytketExporter())
+        self.name = "pytket"
 
 
 class PytketImporter(Importer):
@@ -33,7 +34,7 @@ class PytketImporter(Importer):
 
 class PytketOptimizerPeephole(Transformer):
     def __init__(self):
-        super().__init__("optimizer")
+        super().__init__("pytket_optimizer")
 
     def transform(self, tk_circuit):
         FullPeepholeOptimise().apply(tk_circuit)
