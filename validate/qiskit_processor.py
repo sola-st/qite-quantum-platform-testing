@@ -1,7 +1,9 @@
 
 import os
 from qiskit import QuantumCircuit, transpile
-from qiskit.qasm2 import load, dump
+from qiskit.qasm2 import (
+    load, dump, LEGACY_CUSTOM_INSTRUCTIONS
+)
 from validate.platform_processor import (
     PlatformProcessor, Importer, Transformer, Exporter
 )
@@ -23,7 +25,7 @@ class QiskitImporter(Importer):
     def import_qasm(self, path):
         try:
             # raise Exception("Optimizer failed")
-            qc = load(path)
+            qc = load(path, custom_instructions=LEGACY_CUSTOM_INSTRUCTIONS)
             return qc
         except Exception as e:
             raise e
