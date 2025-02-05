@@ -94,6 +94,7 @@ from pathlib import Path
 from typing import Dict, Any, List
 import click
 from rich.console import Console
+from tempfile import NamedTemporaryFile
 
 console = Console()
 
@@ -123,6 +124,7 @@ def build_command(command_config: Dict[str, Any]) -> str:
     """Build the Python command from the configuration."""
     module = command_config['module']
     arguments = command_config['arguments']
+    config = command_config.get('config', None)
 
     # Convert the arguments to command line options
     cmd_parts = [f"python -m {module}"]
@@ -136,6 +138,14 @@ def build_command(command_config: Dict[str, Any]) -> str:
         else:
             flag = f"--{key}"
             cmd_parts.append(f"{flag} {value}")
+
+    # Handle the config file if present
+    if config:
+        with NamedTemporaryFile(delete=False, suffix='.yaml') as temp_config_file:
+            with open(temp_config_file.name, 'w') as f:
+                yaml.dump(config, f)
+            temp_config_file_path = temp_config_file.name
+        cmd_parts.append(f"--config {temp_config_file_path}")
 
     return " ".join(cmd_parts)
 
