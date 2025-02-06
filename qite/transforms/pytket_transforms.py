@@ -7,7 +7,7 @@ from pytket.passes import (
     ZXGraphlikeOptimisation
 )
 from pytket.circuit import OpType
-from validate.platform_processor import Transformer
+from qite.base.primitives import Transformer
 
 
 class PytketOptimizerFullPeephole(Transformer):

@@ -1,7 +1,11 @@
 import os
 import pennylane as qml
 from pennylane.tape import make_qscript, QuantumScript
-from validate.platform_processor import PlatformProcessor, Importer, Exporter
+from qite.processors.platform_processor import PlatformProcessor
+
+from qite.base.primitives import (
+    Importer, Transformer, Exporter
+)
 
 
 class PennyLaneProcessor(PlatformProcessor):

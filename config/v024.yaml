@@ -11,7 +11,7 @@ commands:
       # seed: 42
       final_measure: False
       num_programs: 100
-      output_dir: program_bank/v024/<<RUN_FOLDER>>
+      output_dir: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
     config:
       gate_set: [
         'h', 'x', 'y', 'z', 'cx', 'cz', 'rx', 'ry', 'rz', 's', 't', 'tdg',
@@ -23,9 +23,14 @@ commands:
         'c4x']
 
 
-  - module: validate.qite_loop
+  - module: qite.qite_loop
     arguments:
-      input_folder: program_bank/v024/<<RUN_FOLDER>>
+      input_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
       number_of_rounds: 1
       n_transform_iter: 3
+
+  - module: qite.explore_warnings
+    arguments:
+      folder_path: program_bank/v024/2025_02_06__16_33/error
+      top_k: 3
 

@@ -3,19 +3,20 @@ import random
 from pathlib import Path
 from typing import List
 from rich.console import Console
-from validate.qiskit_processor import (
-    QiskitProcessor,
-    QiskitChangeGateSetU3CX, QiskitOptimizerLevel2
-)
+
+from qite.processors.qiskit_processor import QiskitProcessor
+from qite.processors.pytket_processor import PytketProcessor
+from qite.processors.pennylane_processor import PennyLaneProcessor
+
 from qite.transforms.pytket_transforms import list_pytket_transformers
 from qite.transforms.pennylane_transforms import list_pennylane_transformers
-from validate.pytket_processor import PytketProcessor
-from validate.pennylane_processor import PennyLaneProcessor
+from qite.transforms.qiskit_transforms import list_qiskit_transformers
+
 import signal
-from validate.bqskit_processor import (
-    BQSKitProcessor,
-    BQSKitOptimizer
-)
+# from validate.bqskit_processor import (
+#     BQSKitProcessor,
+#     BQSKitOptimizer
+# )
 
 """Cmd line that applies the QITE algorithm to all the generated QASM programs.
 

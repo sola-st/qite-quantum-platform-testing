@@ -4,8 +4,11 @@ from qiskit import QuantumCircuit, transpile
 from qiskit.qasm2 import (
     load, dump, LEGACY_CUSTOM_INSTRUCTIONS
 )
-from validate.platform_processor import (
-    PlatformProcessor, Importer, Transformer, Exporter
+from qite.processors.platform_processor import (
+    PlatformProcessor
+)
+from qite.base.primitives import (
+    Importer, Transformer, Exporter
 )
 
 
@@ -29,22 +32,6 @@ class QiskitImporter(Importer):
             return qc
         except Exception as e:
             raise e
-
-
-class QiskitOptimizerLevel2(Transformer):
-    def __init__(self):
-        super().__init__("optimizer_lvl2")
-
-    def transform(self, qc_obj):
-        return transpile(qc_obj, optimization_level=2)
-
-
-class QiskitChangeGateSetU3CX(Transformer):
-    def __init__(self):
-        super().__init__("change_gateset_u3_cx")
-
-    def transform(self, qc_obj):
-        return transpile(qc_obj, basis_gates=['u3', 'cx'])
 
 
 class QiskitExporter(Exporter):

@@ -103,11 +103,13 @@ def load_config(config_file: Path) -> Dict[str, Any]:
     """Load the YAML configuration file."""
     # replace the keywords:
     # <<RUN_FOLDER>> -> '%Y_%m_%d__%H_%M'
-    # <<LOG_FOLDER>> -> 'logs'
+    # <<THIS_FILE_NAME>> -> filename of the yaml file without extension
 
     raw_config = config_file.read_text()
     raw_config = raw_config.replace(
         '<<RUN_FOLDER>>', datetime.datetime.now().strftime('%Y_%m_%d__%H_%M'))
+    raw_config = raw_config.replace(
+        '<<THIS_FILE_NAME>>', config_file.stem)
 
     return yaml.safe_load(raw_config)
 

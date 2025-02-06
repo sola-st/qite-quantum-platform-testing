@@ -3,8 +3,11 @@ from pytket.extensions.qiskit import qiskit_to_tk, tk_to_qiskit
 from pytket.qasm import (
     circuit_from_qasm_str, circuit_to_qasm_str
 )
-from validate.platform_processor import (
-    PlatformProcessor, Importer, Transformer, Exporter
+from qite.processors.platform_processor import (
+    PlatformProcessor
+)
+from qite.base.primitives import (
+    Importer, Exporter
 )
 
 

@@ -1,4 +1,4 @@
-from validate.platform_processor import Transformer
+
 import pennylane as qml
 
 from pennylane.transforms import (
@@ -16,6 +16,7 @@ from pennylane.transforms import (
     clifford_t_decomposition,
     defer_measurements,
 )
+from qite.base.primitives import Transformer
 
 
 class PennylaneOptimizerCancelInverses(Transformer):
