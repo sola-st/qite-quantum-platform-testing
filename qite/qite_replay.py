@@ -134,11 +134,14 @@ def run_qite(
         metadata=metadata,
         output_folder=output_debug_folder
     )
+    predefined_output_filename = None
+    if "output_qasm" in metadata:
+        predefined_output_filename = Path(metadata["output_qasm"]).name
     processor.execute_qite_loop(
         qasm_file=str(qasm_file),
         raise_any_exception=True,
         print_intermediate_qasm=print_intermediate_qasm,
-        predefined_output_filename=Path(metadata["output_qasm"]).name
+        predefined_output_filename=predefined_output_filename
     )
 
 
