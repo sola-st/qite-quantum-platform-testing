@@ -15,6 +15,7 @@ class PytketOptimizerFullPeephole(Transformer):
         super().__init__("pytket_optimizer_full_peephole")
 
     def transform(self, tk_circuit):
+        DecomposeBoxes().apply(tk_circuit)
         FullPeepholeOptimise(allow_swaps=False).apply(tk_circuit)
         return tk_circuit
 
@@ -24,6 +25,7 @@ class PytketOptimizerPeephole2Q(Transformer):
         super().__init__("pytket_optimizer_peephole_2q")
 
     def transform(self, tk_circuit):
+        DecomposeBoxes().apply(tk_circuit)
         PeepholeOptimise2Q(allow_swaps=False).apply(tk_circuit)
         return tk_circuit
 
