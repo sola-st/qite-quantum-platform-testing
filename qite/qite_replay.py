@@ -11,6 +11,7 @@ from qite.processors.pennylane_processor import PennyLaneProcessor
 from qite.processors.platform_processor import PlatformProcessor
 from qite.transform_ops import transform_lookup
 from qite.base.primitives import Transformer
+import logging
 
 """Script to reply the QITE algorithm given some metadata.
 
@@ -66,6 +67,8 @@ def copy_qasm_file(
     only_file_name = Path(rel_path_qasm).name
     qasm_file = Path(input_folder) / only_file_name
     output_qasm_file = output_folder / qasm_file.name
+    if qasm_file == output_qasm_file:
+        return output_qasm_file
     shutil.copy(qasm_file, output_qasm_file)
     return output_qasm_file
 
@@ -134,8 +137,29 @@ def run_qite(
     processor.execute_qite_loop(
         qasm_file=str(qasm_file),
         raise_any_exception=True,
-        print_intermediate_qasm=print_intermediate_qasm
+        print_intermediate_qasm=print_intermediate_qasm,
+        predefined_output_filename=Path(metadata["output_qasm"]).name
     )
+
+
+def run_qite_chain(
+        metadata_paths: List[str],
+        input_folder: str, output_debug_folder: str,
+        print_intermediate_qasm: bool = False):
+    """Run the QITE algorithm based on a chain of metadata.
+
+    Each metadata contains the "input_qasm" and the "output_qasm"
+    which should be used as output file.
+    """
+    logger = logging.getLogger(__name__)
+    for metadata_path in metadata_paths:
+        logger.info(f"Running QITE with metadata: {metadata_path}")
+        run_qite(
+            metadata_path=metadata_path,
+            input_folder=input_folder,
+            output_debug_folder=output_debug_folder,
+            print_intermediate_qasm=print_intermediate_qasm
+        )
 
 
 @click.command()

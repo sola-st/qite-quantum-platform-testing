@@ -1,0 +1,57 @@
+# v024: Generation with QASM generator
+
+# Support passing config parameter to the command that take --config argument as path to yaml file
+
+
+commands:
+  # - module: generators.qasm_code_gen
+  #   arguments:
+  #     num_qubits: 11
+  #     num_gates: 15
+  #     # seed: 42
+  #     final_measure: False
+  #     num_programs: 100
+  #     output_dir: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
+  #   config:
+  #     gate_set: [
+  #       'h', 'x', 'y', 'z', 'cx', 'cz', 'rx', 'ry', 'rz', 's', 't', 'tdg',
+  #       'sdg', 'swap', 'ccx', 'cswap', 'crz',
+  #       'u3', 'u2', 'u1', 'cx', 'id', 'u0', 'u', 'p', 'x', 'y', 'z', 'h',
+  #       's', 'sdg', 't', 'tdg', 'rx', 'ry', 'rz', 'sx', 'sxdg', 'cz', 'cy',
+  #       'swap', 'ch', 'ccx', 'cswap', 'crx', 'cry', 'crz', 'cu1', 'cp',
+  #       'cu3', 'csx', 'cu', 'rxx', 'rzz', 'rccx', 'rc3x', 'c3x', 'c3sqrtx',
+  #       'c4x']
+
+
+  # - module: qite.qite_loop
+  #   arguments:
+  #     input_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
+  #     number_of_rounds: 3
+  #     n_transform_iter: 3
+  #   config:
+  #     platforms: [
+  #       'qiskit', 'pytket', 'pennylane'
+  #     ]
+
+  # - module: qite.explore_warnings
+  #   arguments:
+  #     folder_path: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/error
+  #     top_k: 10
+
+# python -m spot_divergences --input_folder /path/to/input_folder --comparison_folder /path/to/comparison_folder --metadata_folder /path/to/metadata_folder
+# program_bank/v024/2025_02_06__17_14/metadata/0000002_qite_b60d63.json
+
+
+  # - module: qite.spot_divergences
+  #   arguments:
+  #     input_folder: program_bank/v024/2025_02_06__17_14
+  #     comparison_folder: program_bank/v024/2025_02_06__17_14/comparison
+  #     metadata_folder: program_bank/v024/2025_02_06__17_14/metadata
+
+  - module: qite.delta_debugging_comparison
+    arguments:
+      comparison_metadata: program_bank/v024/2025_02_06__17_14/comparison/0000009_qite_88e429_vs_0000009_qite_b6cb8e.json
+      input_folder: program_bank/v024/2025_02_06__17_14
+      output_folder: program_bank/v024/2025_02_06__17_14/minimize_comparison
+
+# python -m qite.delta_debugging_comparison --comparison_metadata program_bank/v024/2025_02_06__17_14/comparison/0000009_qite_88e429_vs_0000009_qite_b6cb8e.json --input_folder program_bank/v024/2025_02_06__17_14 --output_folder program_bank/v024/2025_02_06__17_14/minimize_comparison

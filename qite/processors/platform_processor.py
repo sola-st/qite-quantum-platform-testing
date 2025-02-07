@@ -85,7 +85,9 @@ class PlatformProcessor:
 
     def execute_qite_loop(
             self, qasm_file, raise_any_exception: bool = False,
-            print_intermediate_qasm: bool = False) -> Optional[Path]:
+            print_intermediate_qasm: bool = False,
+            predefined_output_filename: Optional[str] = None
+    ) -> Optional[Path]:
         logger.info(f"Executing QITE loop with QASM file: {qasm_file}")
         self.current_status = {
             "input_qasm": qasm_file,
@@ -97,7 +99,8 @@ class PlatformProcessor:
 
         random_id = uuid.uuid4().hex[:6]
         prefix_qasm_file = os.path.basename(qasm_file).split("_")[0]
-        base_output_name = f"{prefix_qasm_file}_qite_{random_id}"
+        base_output_name = Path(
+            predefined_output_filename).stem or f"{prefix_qasm_file}_qite_{random_id}"
         qasm_output_filename = f"{base_output_name}.qasm"
         metadata_output_filename = f"{base_output_name}.json"
 
