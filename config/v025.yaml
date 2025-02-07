@@ -9,6 +9,7 @@ commands:
       num_qubits: 11
       num_gates: 15
       # seed: 42
+      only_qregs: True
       final_measure: False
       num_programs: 100
       output_dir: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>

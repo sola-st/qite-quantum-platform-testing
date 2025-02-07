@@ -247,9 +247,10 @@ class C4X(Gate):
 class QASMCodeGenerator:
     def __init__(
             self, num_qubits: int, seed: Optional[int] = None,
-            gate_set: Optional[List[str]] = None):
+            gate_set: Optional[List[str]] = None, only_qregs: bool = False):
         self.num_qubits = num_qubits
         self.qasm_code = []
+        self.only_qregs = only_qregs
         self.available_gates = {
             "u3": U3(),
             "u2": U2(),
@@ -301,9 +302,6 @@ class QASMCodeGenerator:
         if seed is not None:
             random.seed(seed)
 
-        if seed is not None:
-            random.seed(seed)
-
     def reset_memory(self):
         self.qasm_code = []
 
@@ -313,7 +311,8 @@ class QASMCodeGenerator:
 
     def generate_registers(self):
         self.qasm_code.append(f"qreg q[{self.num_qubits}];")
-        self.qasm_code.append(f"creg c[{self.num_qubits}];")
+        if not self.only_qregs:
+            self.qasm_code.append(f"creg c[{self.num_qubits}];")
 
     def add_gate(self, gate: Gate):
         self.qasm_code.append(gate.to_qasm("q", self.num_qubits))
@@ -327,7 +326,7 @@ class QASMCodeGenerator:
         self.generate_registers()
         for _ in range(num_gates):
             self.add_random_gate()
-        if final_measure:
+        if final_measure and not self.only_qregs:
             self.qasm_code.append("measure q -> c;")
 
     def get_qasm_code(self):
@@ -383,7 +382,7 @@ def get_latest_qasm_index(output_dir: Path) -> int:
 
 def generate_qasm_programs(
         num_qubits: int, num_gates: int, seed: int, final_measure: bool,
-        num_programs: int, output_dir: str,
+        num_programs: int, output_dir: str, only_qregs: bool,
         gate_set: Optional[List[str]] = None):
     """Generate a given number of random QASM programs.
 
@@ -398,18 +397,14 @@ def generate_qasm_programs(
 
     generation_output_path = output_path
 
-    # date_str = datetime.now().strftime("%Y_%m_%d__%H_%M")
-    # subfolder_name = f"{date_str}__qasm"
-    # generation_output_path = output_path / subfolder_name
-    # generation_output_path.mkdir(parents=True, exist_ok=True)
-
     if not seed:
         seed = random.randint(0, 1000)
     # store the seed in the output folder
     with (generation_output_path / "_seed.txt").open("w") as f:
         f.write(str(seed))
     generator = QASMCodeGenerator(
-        num_qubits=num_qubits, seed=seed, gate_set=gate_set)
+        num_qubits=num_qubits, seed=seed, gate_set=gate_set,
+        only_qregs=only_qregs)
 
     starting_index = get_latest_qasm_index(
         generation_output_path) + 1
@@ -442,9 +437,12 @@ def generate_qasm_programs(
               help='Output directory for the generated programs.')
 @click.option('--config', type=click.Path(exists=True), default=None,
               help='Path to the config file (YAML).')
+@click.option('--only_qregs', is_flag=True, default=False,
+              help='Generate only quantum registers without classical registers.')
 def main(
         num_qubits: int, num_gates: int, seed: int, final_measure: bool,
-        num_programs: int, output_dir: str, config: Optional[str]):
+        num_programs: int, output_dir: str, config: Optional[str],
+        only_qregs: bool):
 
     gate_set = None
 
@@ -458,11 +456,12 @@ def main(
         num_programs = config_data.get('num_programs', num_programs)
         output_dir = config_data.get('output_dir', output_dir)
         gate_set = config_data.get('gate_set', gate_set)
+        only_qregs = config_data.get('only_qregs', only_qregs)
 
     generate_qasm_programs(
         num_qubits=num_qubits, num_gates=num_gates, seed=seed,
         final_measure=final_measure, num_programs=num_programs,
-        output_dir=output_dir, gate_set=gate_set)
+        output_dir=output_dir, only_qregs=only_qregs, gate_set=gate_set)
 
 
 if __name__ == "__main__":
