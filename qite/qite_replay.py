@@ -3,15 +3,14 @@ from pathlib import Path
 import shutil
 import json
 from rich.console import Console
-from typing import Dict, Any
+from typing import Dict, Any, List
 
-from validate.qiskit_processor import QiskitProcessor
-from validate.pytket_processor import PytketProcessor
-from validate.platform_processor import (
-    PlatformProcessor,
-    Transformer,
-)
+from qite.processors.qiskit_processor import QiskitProcessor
+from qite.processors.pytket_processor import PytketProcessor
+from qite.processors.pennylane_processor import PennyLaneProcessor
+from qite.processors.platform_processor import PlatformProcessor
 from qite.transform_ops import transform_lookup
+from qite.base.primitives import Transformer
 
 """Script to reply the QITE algorithm given some metadata.
 
@@ -50,7 +49,7 @@ The goal is to be able to import that function also from other files.
 """
 
 
-console = Console()
+console = Console(color_system="auto")
 
 
 def load_metadata(metadata_path: Path) -> Dict[str, Any]:
@@ -71,7 +70,7 @@ def copy_qasm_file(
     return output_qasm_file
 
 
-def pick_relevant_transformers(metadata: Dict[str, Any]) -> list[Transformer]:
+def pick_relevant_transformers(metadata: Dict[str, Any]) -> List[Transformer]:
     """Pick the relevant transformers based on metadata."""
     transformers = []
     for transformer_name in metadata["transformer_functions"]:
@@ -99,6 +98,12 @@ def setup_processor(
             error_folder=output_folder,
             output_folder=output_folder
         )
+    elif processor_name == "pennylane":
+        processor = PennyLaneProcessor(
+            metadata_folder=output_folder,
+            error_folder=output_folder,
+            output_folder=output_folder
+        )
     else:
         raise ValueError(f"Unsupported platform: {processor_name}")
 
@@ -108,13 +113,14 @@ def setup_processor(
     return processor
 
 
-def run_qite(metadata_path: str, input_folder: str, output_debug_folder: str):
+def run_qite(
+        metadata_path: str, input_folder: str, output_debug_folder: str,
+        print_intermediate_qasm: bool = False):
     """Run the QITE algorithm based on metadata."""
     metadata_path = Path(metadata_path)
     input_folder = Path(input_folder)
     output_debug_folder = Path(output_debug_folder)
     output_debug_folder.mkdir(parents=True, exist_ok=True)
-
     metadata = load_metadata(metadata_path=metadata_path)
     qasm_file = copy_qasm_file(
         metadata=metadata,
@@ -127,7 +133,8 @@ def run_qite(metadata_path: str, input_folder: str, output_debug_folder: str):
     )
     processor.execute_qite_loop(
         qasm_file=str(qasm_file),
-        raise_any_exception=True
+        raise_any_exception=True,
+        print_intermediate_qasm=print_intermediate_qasm
     )
 
 

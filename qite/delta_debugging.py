@@ -7,6 +7,10 @@ from pathlib import Path
 import click
 from qite.qite_replay import run_qite
 from analysis_and_reporting.ddmin import DDMin
+from rich.console import Console
+
+
+console = Console(color_system="auto")
 
 
 def load_error_json(error_json_path):
@@ -15,12 +19,14 @@ def load_error_json(error_json_path):
 
 
 def run_qite_wrapper(
-        metadata_path, input_folder, output_debug_folder, clue: str = None):
+        metadata_path, input_folder, output_debug_folder, clue: str = None,
+        print_intermediate_qasm: bool = False):
     try:
         run_qite(
             metadata_path=metadata_path,
             input_folder=input_folder,
-            output_debug_folder=output_debug_folder)
+            output_debug_folder=output_debug_folder,
+            print_intermediate_qasm=print_intermediate_qasm)
         return True
     except Exception as e:
         print(f"Error: {e}")
@@ -36,8 +42,19 @@ def ddmin(test, c):
 
 
 def ask_user_to_confirm_clue(error_data):
+    """
+    Ask the user to confirm or provide a new clue for the error.
+
+    Parameters:
+    error_data (dict): The error data loaded from the JSON file.
+
+    Returns:
+    str: The clue to be used for error identification.
+    """
     clue = error_data.get('error', '')
-    print(f"Error clue from metadata: {clue}")
+    console.rule("[bold red]Error Clue Confirmation[/bold red]")
+    console.print(
+        f"[bold yellow]Error clue from metadata:[/bold yellow] {clue}")
     user_input = input(
         "Enter a new clue or press Enter to use the existing clue: ").strip()
     return user_input if user_input else clue
@@ -46,19 +63,37 @@ def ask_user_to_confirm_clue(error_data):
 @click.command()
 @click.option('--error_json', required=True, type=str,
               help='Path to the error JSON file.')
-@click.option('--output_folder', required=False, type=str, default='.',
+@click.option('--output_folder', required=False, type=str, default=None,
               help='Path to the output folder for storing debug files.')
-@click.option('--input_folder', required=True, type=str,
+@click.option('--input_folder', required=False, type=str, default=None,
               help='Path to the folder containing the QASM input file.')
 def main(error_json, output_folder, input_folder):
     error_data = load_error_json(error_json)
+
+    if not output_folder and not input_folder:
+        input_folder = Path(error_data['input_qasm']).parent
+        output_folder = input_folder / "minimized"
+        console.rule("[bold red]Folders Not Provided[/bold red]")
+        console.print(
+            f"[bold yellow]Input folder not provided. Using:[/bold yellow]\n"
+            f"\t[bold green]INPUT  FOLDER:[/bold green] \t{input_folder}")
+        console.print(
+            f"[bold yellow]Output folder not provided. Using:[/bold yellow]\n"
+            f"\t[bold green]OUTPUT FOLDER:[/bold green] \t{output_folder}")
+        console.print(
+            "[bold cyan]Press Enter to confirm or provide the correct paths as arguments "
+            "using --output_folder and --input_folder options. Press Ctrl+C to exit.[/bold cyan]")
+        input()
+
     clue = ask_user_to_confirm_clue(error_data)
     input_qasm_filename = Path(error_data['input_qasm']).name
     input_qasm = Path(input_folder) / input_qasm_filename
     metadata_path = error_json
 
     tmpdir = Path(tempfile.mkdtemp())
-    print(f"Temporary directory created at {tmpdir}")
+    console.rule("[bold blue]QASM Delta Debugging[/bold blue]")
+    console.print(
+        f"[bold green]Temporary directory created at:[/bold green] {tmpdir}")
     output_debug_folder = tmpdir / "debug"
     output_debug_folder.mkdir(parents=True, exist_ok=True)
 
@@ -78,7 +113,8 @@ def main(error_json, output_folder, input_folder):
             metadata_path=tmp_metadata_path,
             input_folder=tmpdir,
             output_debug_folder=output_debug_folder,
-            clue=clue)
+            clue=clue,
+            print_intermediate_qasm=False)
 
     with open(input_qasm, 'r') as f:
         qasm_lines = f.readlines()
@@ -90,8 +126,31 @@ def main(error_json, output_folder, input_folder):
     with open(minimized_qasm_file, 'w') as f:
         f.writelines(minimized_qasm_lines)
 
-    print(f"Minimized QASM file saved to {minimized_qasm_file}")
-    print(f"Temporary directory retained at {tmpdir}")
+    metadata_content['input_qasm'] = str(minimized_qasm_file)
+    with open(tmp_metadata_path, 'w') as f:
+        json.dump(metadata_content, f)
+
+    console.print(
+        f"[bold green]Minimized QASM file saved to:[/bold green] "
+        f"{minimized_qasm_file}")
+    console.print(
+        f"[bold green]Temporary directory retained at:[/bold green] "
+        f"{tmpdir}")
+
+    console.rule("[bold blue]Minimized QASM Content[/bold blue]")
+    with open(minimized_qasm_file, 'r') as f:
+        console.print(f.read())
+
+    console.rule("[bold blue]Metadata Content[/bold blue]")
+    console.print(json.dumps(metadata_content, indent=2))
+
+    console.rule("[bold blue]Intermediate QASM[/bold blue]")
+    run_qite_wrapper(
+        metadata_path=tmp_metadata_path,
+        input_folder=output_folder,
+        output_debug_folder=output_debug_folder,
+        clue=clue,
+        print_intermediate_qasm=True)
 
 
 if __name__ == '__main__':

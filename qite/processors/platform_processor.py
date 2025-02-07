@@ -3,8 +3,12 @@ import json
 import random
 import uuid
 import logging
+from pathlib import Path
+from typing import Optional
+from rich.console import Console
 
 from qite.base.primitives import CrashType
+import tempfile
 
 
 class QasmSelector:
@@ -17,6 +21,8 @@ class QasmSelector:
         qasm_file = random.choice(qasm_files)  # Simplified picking strategy
         return os.path.join(folder, qasm_file)
 
+
+console = Console(color_system="auto")
 
 # Set up module-level logger
 logger = logging.getLogger(__name__)
@@ -77,7 +83,9 @@ class PlatformProcessor:
         logger.info(
             f"Metadata folder set to: {metadata_folder}, Error folder set to: {error_folder}")
 
-    def execute_qite_loop(self, qasm_file, raise_any_exception: bool = False):
+    def execute_qite_loop(
+            self, qasm_file, raise_any_exception: bool = False,
+            print_intermediate_qasm: bool = False) -> Optional[Path]:
         logger.info(f"Executing QITE loop with QASM file: {qasm_file}")
         self.current_status = {
             "input_qasm": qasm_file,
@@ -113,9 +121,12 @@ class PlatformProcessor:
             qc = transformer.run(qc)
             if isinstance(qc, CrashType):
                 logger.info(
-                    f"Transfor {transformer} failed, stopping QITE on this program")
+                    f"Transform {transformer} failed, stopping QITE on this program")
                 return None
             logger.info(f"Transformer {transformer} applied")
+            if print_intermediate_qasm:
+                console.rule(f"QASM after {transformer.name}:")
+                self._print_as_qasm(qc)
 
         export_path = self._handle_export(
             qc, exported_filename=qasm_output_filename)
@@ -130,7 +141,19 @@ class PlatformProcessor:
             json.dump(self.current_status, f, indent=4)
         logger.info(f"Metadata stored at: {metadata_path}")
 
-        return export_path
+        return Path(export_path)
+
+    def _print_as_qasm(self, qc):
+        with tempfile.TemporaryDirectory() as tempdir:
+            intermediate_output_filename = f"{uuid.uuid4()}.qasm"
+            temp_export_path = self._exporter.run(
+                qc_obj=qc,
+                path=tempdir,
+                filename=intermediate_output_filename)
+
+            with open(temp_export_path, 'r') as f:
+                intermediate_qasm_content = f.read()
+                console.print(intermediate_qasm_content, style="magenta")
 
     def _handle_import(self, qasm_file):
         self._importer.load_current_status(self.current_status)
