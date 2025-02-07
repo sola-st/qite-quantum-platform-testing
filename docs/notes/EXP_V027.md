@@ -66,3 +66,28 @@ To minimize the error run this command:
 ```bash
 python -m qite.delta_debugging --error_json program_bank/v024/2025_02_05__17_57/error/0000012_109bc1_65b230_error.json --output_folder program_bank/v024/2025_02_05__17_57/minimized --input_folder program_bank/v024/2025_02_05__17_57
 ```
+
+## Comparison of QASM
+
+To compare two QASM files you can use:
+
+```bash
+python -m qite.spot_divergences --input_folder program_bank/v025/2025_02_07__19_47 --comparison_folder program_bank/v025/2025_02_07__19_47/comparison --metadata_folder program_bank/v025/2025_02_07__19_47/metadata
+```
+
+This will generate the folder `comparison` with the divergences found between the two QASM files.
+
+## Explore Warnings
+
+To explore the warnings found by the QITE loop you can use:
+
+```bash
+python -m qite.explore_warnings --folder_path program_bank/v025/2025_02_07__19_47/comparison --top_k 10 --target_field 'equivalence'
+```
+You can select one of the categories and it will prompt you to the delta debugging of that tool. It will generate a folder with the minimized version of the QASM file and the graph of equivalences.
+
+To run the delta debugger alone you can use:
+
+```bash
+python -m qite.delta_debugging_comparison --comparison_metadata program_bank/v024/2025_02_06__17_14/comparison/0000009_qite_88e429_vs_0000009_qite_b6cb8e.json --input_folder program_bank/v024/2025_02_06__17_14 --output_folder program_bank/v024/2025_02_06__17_14/minimize_comparison
+```
