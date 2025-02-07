@@ -30,7 +30,7 @@ list_qiskit_transformers = [
     QiskitOptimizer(0),
     QiskitOptimizer(1),
     QiskitOptimizer(2),
-    QiskitOptimizer(3),
+    # QiskitOptimizer(3),
     QiskitChangeGateSet(basis_gates=['u1', 'u2', 'u3', 'cx']),
     QiskitChangeGateSet(basis_gates=['u3', 'cx']),
     QiskitChangeGateSet(basis_gates=['rz', 'sx', 'x', 'cx']),
