@@ -26,11 +26,15 @@ commands:
   - module: qite.qite_loop
     arguments:
       input_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
-      number_of_rounds: 1
+      number_of_rounds: 3
       n_transform_iter: 3
+    config:
+      platforms: [
+        'qiskit', 'pytket', 'pennylane'
+      ]
 
   - module: qite.explore_warnings
     arguments:
-      folder_path: program_bank/v024/2025_02_06__16_33/error
-      top_k: 3
+      folder_path: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/error
+      top_k: 10
 
