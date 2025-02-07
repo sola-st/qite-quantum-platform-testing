@@ -99,8 +99,9 @@ class PlatformProcessor:
 
         random_id = uuid.uuid4().hex[:6]
         prefix_qasm_file = os.path.basename(qasm_file).split("_")[0]
-        base_output_name = Path(
-            predefined_output_filename).stem or f"{prefix_qasm_file}_qite_{random_id}"
+        base_output_name = f"{prefix_qasm_file}_qite_{random_id}"
+        if predefined_output_filename:
+            base_output_name = Path(predefined_output_filename).stem
         qasm_output_filename = f"{base_output_name}.qasm"
         metadata_output_filename = f"{base_output_name}.json"
 

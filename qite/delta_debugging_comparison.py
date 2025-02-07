@@ -1,7 +1,7 @@
 import os
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import click
 from rich.console import Console
 from tqdm import tqdm
@@ -12,6 +12,9 @@ from mqt import qcec
 
 import tempfile
 import logging
+import shutil
+
+from qite.generate_equivalences_graph import generate_equivalence_graph
 
 
 """
@@ -172,6 +175,12 @@ def load_json(file_path: Path) -> Dict[str, Any]:
 
 def find_common_ancestor(tree1: List[Dict[str, Any]],
                          tree2: List[Dict[str, Any]]) -> Dict[str, Any]:
+    # case in which one of the two program was
+    # generated and has no provenance tree
+    if len(tree1) == 0:
+        return tree2[0]
+    if len(tree2) == 0:
+        return tree1[0]
     set1 = {node['output_qasm'] for node in tree1}
     for node in tree2:
         if node['output_qasm'] in set1:
@@ -228,7 +237,7 @@ def delta_debugging_in_sandbox(
     original_qcec_result: str,
     tree1: List[Dict[str, Any]],
     tree2: List[Dict[str, Any]],
-) -> str:
+) -> Tuple[str, Path]:
     """Run delta debugging process on the input QASM content.
 
     It returns the minimized QASM content that triggers the same inequivalence.
@@ -266,8 +275,18 @@ def delta_debugging_in_sandbox(
                         print_intermediate_qasm=False)
                 except Exception as e:
                     return True
-            last_qasm_1 = Path(tree1[-1]["output_qasm"]).name
-            last_qasm_2 = Path(tree2[-1]["output_qasm"]).name
+            # case that one tree is empty, means that this file was generated
+            # and has no provenance tree. This can happen only for one of the
+            # two trees, not both because we have only one root qasm per
+            # equivalence class
+            if len(tree1) == 0:
+                last_qasm_1 = Path(tree2[0]["input_qasm"]).name
+            else:
+                last_qasm_1 = Path(tree1[-1]["output_qasm"]).name
+            if len(tree2) == 0:
+                last_qasm_2 = Path(tree1[0]["input_qasm"]).name
+            else:
+                last_qasm_2 = Path(tree2[-1]["output_qasm"]).name
             path_qasm_1 = tmpdir / last_qasm_1
             path_qasm_2 = tmpdir / last_qasm_2
             try:
@@ -310,7 +329,7 @@ def delta_debugging_in_sandbox(
     # so that the intermediate files of this file are in the tmpdir
     repro_func(minimized_qasm_lines)
 
-    return '\n'.join(minimized_qasm_lines)
+    return '\n'.join(minimized_qasm_lines), tmpdir
 
 
 @click.command()
@@ -342,16 +361,25 @@ def main(comparison_metadata: Path, output_folder: Path, input_folder: Path) -> 
     nodes_from_ancestor2 = get_nodes_from_ancestor(
         tree=tree2, ancestor=common_ancestor)
 
-    minimize_file_content = delta_debugging_in_sandbox(
+    minimize_file_content, tmpdir = delta_debugging_in_sandbox(
         qasm_content=comm_anc_content,
         original_qasm_filename=comm_anc_filename,
         original_qcec_result=data['equivalence'],
         tree1=nodes_from_ancestor1,
         tree2=nodes_from_ancestor2)
 
+    output_folder.mkdir(parents=True, exist_ok=True)
     minimized_qasm_path = output_folder / comm_anc_filename
     with minimized_qasm_path.open('w') as file:
         file.write(minimize_file_content)
+
+    # copy entire content of tmpdir to output_folder shutil
+    extra_info_folder = \
+        output_folder / f"{Path(common_ancestor['input_qasm']).stem}_debug"
+    shutil.copytree(tmpdir, extra_info_folder, dirs_exist_ok=True)
+
+    generate_equivalence_graph(
+        input_folder=extra_info_folder, prefix=None)
 
 
 if __name__ == '__main__':

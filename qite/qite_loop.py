@@ -91,7 +91,6 @@ def apply_qite_algorithm(
     qasm_to_process_this_round = qasm_files
 
     for round_num in range(number_of_rounds):
-        breakpoint()
         console.log(f"Round {round_num + 1}/{number_of_rounds}")
         qasm_generated_this_round = []
         for qasm_file in qasm_to_process_this_round:
@@ -163,6 +162,8 @@ def process_qasm_file(
         #     f"Processed {qasm_file} successfully. Output: {final_path}")
     except Exception as e:
         console.log(f"Error processing {qasm_file}: {e}")
+        # console.print_exception()
+        # raise e
 
     return None
 

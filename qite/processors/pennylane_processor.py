@@ -50,9 +50,22 @@ class PennyLaneExporter(Exporter):
     def _export_to_qasm_with_pennylane(self, circuit):
         """Export a PennyLane circuit to a QASM file."""
         qs = make_qscript(circuit)()
+        # add identity gates to keep the same ordering
+        highest_wire = 0
+        for op in qs:
+            highest_wire_this_op = max(op.wires) if op.wires else 0
+            highest_wire = max(highest_wire, highest_wire_this_op)
+
+        ops_w_ids = []
+        for i in range(highest_wire+1):
+            ops_w_ids.append(qml.Identity(wires=[i]))
+        for op in qs:
+            ops_w_ids.append(op)
+
+        # add measurements
         new_ops = []
         wires_to_measure = set()
-        for op in qs:
+        for op in ops_w_ids:
             if op.name == 'MidMeasureMP':
                 for wire in op.wires.tolist():
                     wires_to_measure.add(wire)
@@ -63,5 +76,5 @@ class PennyLaneExporter(Exporter):
             [qml.expval(qml.PauliZ(wire)) for wire in wires_to_measure]
         )
 
-        qasm_str_pennylane = qs_no_meas.to_openqasm(measure_all=True)
+        qasm_str_pennylane = qs_no_meas.to_openqasm(measure_all=False)
         return qasm_str_pennylane
