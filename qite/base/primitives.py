@@ -36,8 +36,6 @@ class Operation:
             if self.raise_any_exception:
                 raise e
             else:
-                if "'NoneType' object has no attribute 'n_gates_of_type'" in str(e):
-                    breakpoint()
                 self.log_error({
                     "error": str(e),
                     "traceback": traceback.format_exc(),
@@ -46,6 +44,13 @@ class Operation:
                     **self.current_status
                 })
                 return CrashType.GENERIC_CRASH
+
+    def run_with_time(
+            self, *args, **kwargs) -> (Any, float):
+        start_time = time.time()
+        result = self.run(*args, **kwargs)
+        end_time = time.time()
+        return result, end_time - start_time
 
     def log_error(self, error_info):
         uuid_str = uuid.uuid4().hex[:6]

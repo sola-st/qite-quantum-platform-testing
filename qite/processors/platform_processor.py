@@ -95,6 +95,9 @@ class PlatformProcessor:
             "importer_function": None,
             "transformer_functions": [],
             "exporter_function": None,
+            "importer_time": None,
+            "transformation_time": [],
+            "exporter_time": None
         }
 
         random_id = uuid.uuid4().hex[:6]
@@ -122,7 +125,9 @@ class PlatformProcessor:
             self.current_status["transformer_functions"].append(
                 transformer.name)
             transformer.load_current_status(self.current_status)
-            qc = transformer.run(qc)
+            qc, time_transformation = transformer.run_with_time(qc)
+            self.current_status["transformation_time"].append(
+                time_transformation)
             if isinstance(qc, CrashType):
                 logger.info(
                     f"Transform {transformer} failed, stopping QITE on this program")
@@ -161,18 +166,20 @@ class PlatformProcessor:
 
     def _handle_import(self, qasm_file):
         self._importer.load_current_status(self.current_status)
-        qc = self._importer.run(qasm_file)
+        qc, time_op = self._importer.run_with_time(qasm_file)
         self.current_status["importer_function"] = self._importer.name
+        self.current_status["importer_time"] = time_op
         logger.info(f"QASM file imported: {qasm_file}")
         return qc
 
     def _handle_export(self, qc, exported_filename=None):
         self._exporter.load_current_status(self.current_status)
-        export_path = self._exporter.run(
+        export_path, time_op = self._exporter.run_with_time(
             qc_obj=qc,
             path=self.output_folder,
             filename=exported_filename)
         self.current_status["exporter_function"] = self._exporter.name
         self.current_status["output_qasm"] = export_path
+        self.current_status["exporter_time"] = time_op
         logger.info(f"QASM file exported to: {export_path}")
         return export_path

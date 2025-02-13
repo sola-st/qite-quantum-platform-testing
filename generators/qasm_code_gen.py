@@ -10,6 +10,8 @@ from datetime import datetime
 import yaml
 import math
 from typing import Callable
+import json
+import time
 
 # qasm_code_gen.py
 
@@ -396,6 +398,8 @@ def generate_qasm_programs(
     output_path.mkdir(parents=True, exist_ok=True)
 
     generation_output_path = output_path
+    generation_time_path = output_path / "generation_time"
+    generation_time_path.mkdir(parents=True, exist_ok=True)
 
     if not seed:
         seed = random.randint(0, 1000)
@@ -410,16 +414,26 @@ def generate_qasm_programs(
         generation_output_path) + 1
 
     for i in range(starting_index, num_programs + starting_index):
+        start_time = time.time()
         generator.generate_random_qasm(
             num_gates=num_gates, final_measure=final_measure)
         qasm_code = generator.get_qasm_code()
         generator.reset_memory()
+        end_time = time.time()
+        generation_time = end_time - start_time
+
         random_chars = uuid4().hex[:6]
-        file_path = generation_output_path / \
-            f"{str(i).zfill(7)}_{random_chars}.qasm"
-        with file_path.open("w") as f:
+        file_prefix = f"{str(i).zfill(7)}_{random_chars}"
+        qasm_file_path = generation_output_path / f"{file_prefix}.qasm"
+        time_file_path = generation_time_path / f"{file_prefix}.json"
+
+        with qasm_file_path.open("w") as f:
             f.write(qasm_code)
-        console.log(f"Generated {file_path}")
+
+        with time_file_path.open("w") as f:
+            json.dump({"generation_time": generation_time}, f)
+
+        console.log(f"Generated {qasm_file_path} and {time_file_path}")
 
 
 @click.command()

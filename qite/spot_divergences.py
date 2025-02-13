@@ -65,6 +65,7 @@ import random
 import logging
 from pathlib import Path
 from typing import List, Tuple, Optional
+import time
 
 logging.basicConfig(level=logging.INFO)
 
@@ -144,6 +145,7 @@ def process_files(input_folder: str, comparison_folder: str,
 
         for path_qasm_a, path_qasm_b in pairs:
             logging.info(f"Comparing {path_qasm_a} and {path_qasm_b}")
+            start_time = time.time()
             try:
                 result = qcec.verify(
                     str(path_qasm_a),
@@ -153,6 +155,9 @@ def process_files(input_folder: str, comparison_folder: str,
             except Exception as e:
                 logging.error(f"Error during QCEC verification: {e}")
                 equivalence = f"error: {e}"
+            finally:
+                end_time = time.time()
+                comparator_time = end_time - start_time
 
             metadata_a = get_metadata(path_qasm_a, metadata_folder)
             metadata_b = get_metadata(path_qasm_b, metadata_folder)
@@ -169,7 +174,8 @@ def process_files(input_folder: str, comparison_folder: str,
                         "platform", "generator")
                      if metadata_b else "generator",
                      "provenance_tree": metadata_b}],
-                "equivalence": equivalence}
+                "equivalence": equivalence,
+                "comparator_time": comparator_time}
 
             output_path = comparison_path / \
                 f"{Path(path_qasm_a).stem}_vs_{Path(path_qasm_b).stem}.json"
