@@ -1,3 +1,5 @@
+from qiskit.qasm2 import load, LEGACY_CUSTOM_INSTRUCTIONS
+from qiskit.quantum_info import Operator
 import os
 import json
 from pathlib import Path
@@ -231,6 +233,29 @@ def write_tree_to_disk(
     return filenames
 
 
+def compare_unitary_equivalence(qasm1_path: str, qasm2_path: str) -> None:
+    """Compare the unitary equivalence of two QASM files."""
+    try:
+        qc1 = load(qasm1_path, custom_instructions=LEGACY_CUSTOM_INSTRUCTIONS)
+        qc2 = load(qasm2_path, custom_instructions=LEGACY_CUSTOM_INSTRUCTIONS)
+
+        op1 = Operator(qc1)
+        op2 = Operator(qc2)
+
+        # console.print("QASM 1 Unitary Matrix:")
+        # console.print(op1.data)
+
+        # console.print("QASM 2 Unitary Matrix:")
+        # console.print(op2.data)
+
+        unitary_equiv = op1.equiv(op2)
+        print(f"Unitary Equivalence: {unitary_equiv}")
+    except Exception as e:
+        print(f"Error: {e}")
+        return False
+    return unitary_equiv
+
+
 def delta_debugging_in_sandbox(
     qasm_content: str,
     original_qasm_filename: str,
@@ -290,11 +315,21 @@ def delta_debugging_in_sandbox(
             path_qasm_1 = tmpdir / last_qasm_1
             path_qasm_2 = tmpdir / last_qasm_2
             try:
+                # print the qasm files content
+                # with path_qasm_1.open('r') as file:
+                #     console.print(file.read(), style="red")
+                # with path_qasm_2.open('r') as file:
+                #     console.print(file.read(), style="blue")
                 result = qcec.verify(
                     str(path_qasm_1),
                     str(path_qasm_2),
                     transform_dynamic_circuit=True)
                 equivalence = str(result.equivalence)
+                # if compare_unitary_equivalence(
+                #         str(path_qasm_1), str(path_qasm_2)):
+                #     equivalence = "equivalent"
+                # else:
+                #     equivalence = "not_equivalent"
             except Exception as e:
                 equivalence = f"error: {e}"
             logger.info("Equivalence Check")

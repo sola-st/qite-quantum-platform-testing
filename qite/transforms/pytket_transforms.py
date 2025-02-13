@@ -4,7 +4,8 @@ from pytket.passes import (
     FlattenRegisters, PauliSimp, GreedyPauliSimp,
     AutoRebase,
     OptimisePhaseGadgets,
-    ZXGraphlikeOptimisation
+    ZXGraphlikeOptimisation,
+    DecomposeBoxes
 )
 from pytket.circuit import OpType
 from qite.base.primitives import Transformer
@@ -133,13 +134,34 @@ class PytketOptimizerZXGraphlikeOptimisation(Transformer):
 
 
 class PytketChangeGateSet(Transformer):
-    def __init__(self):
-        super().__init__("change_gateset")
+    def __init__(self, basis_gates):
+        gate_names = "_".join([optype.name for optype in basis_gates])
+        super().__init__(f"pytket_change_gateset_{gate_names}")
+        self.basis_gates = basis_gates
 
     def transform(self, tk_circuit):
-        # Assuming the gate set change is handled by some optimization pass
-        # Here we just return the circuit as is
+        AutoRebase(set(self.basis_gates)).apply(tk_circuit)
         return tk_circuit
+
+
+class PytketChangeGateSetU1U2U3CX(PytketChangeGateSet):
+    def __init__(self):
+        super().__init__([OpType.U1, OpType.U2, OpType.U3, OpType.CX])
+
+
+class PytketChangeGateSetU3CX(PytketChangeGateSet):
+    def __init__(self):
+        super().__init__([OpType.U3, OpType.CX])
+
+
+class PytketChangeGateSetRzSxXCX(PytketChangeGateSet):
+    def __init__(self):
+        super().__init__([OpType.Rz, OpType.SX, OpType.X, OpType.CX])
+
+
+class PytketChangeGateSetRxRyRzCZ(PytketChangeGateSet):
+    def __init__(self):
+        super().__init__([OpType.Rx, OpType.Ry, OpType.Rz, OpType.CZ])
 
 
 list_pytket_transformers = [
@@ -153,5 +175,9 @@ list_pytket_transformers = [
     PytketOptimizerPauliSimp(),
     PytketOptimizerGreedyPauliSimp(),
     PytketOptimizerOptimisePhaseGadgets(),
-    PytketOptimizerZXGraphlikeOptimisation()
+    PytketOptimizerZXGraphlikeOptimisation(),
+    PytketChangeGateSetU1U2U3CX(),
+    PytketChangeGateSetU3CX(),
+    PytketChangeGateSetRzSxXCX(),
+    PytketChangeGateSetRxRyRzCZ()
 ]

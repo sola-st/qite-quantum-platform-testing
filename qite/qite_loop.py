@@ -90,6 +90,7 @@ def apply_qite_algorithm(
     qasm_files = sorted(list(input_path.glob("*.qasm")))
     qasm_to_process_this_round = qasm_files
 
+    stats_file = input_path / "_qite_stats.txt"
     for round_num in range(number_of_rounds):
         console.log(f"Round {round_num + 1}/{number_of_rounds}")
         qasm_generated_this_round = []
@@ -103,6 +104,8 @@ def apply_qite_algorithm(
         qasm_to_process_this_round = sorted(qasm_generated_this_round)
         n_generated = len(qasm_to_process_this_round)
         console.log(f"Generated {n_generated} new QASM programs.")
+        with stats_file.open("a") as f:
+            f.write(f'{{"round": {round_num + 1}, "n_program": {n_generated}}}\n')
 
 
 def process_qasm_file(
