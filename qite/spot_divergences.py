@@ -66,6 +66,9 @@ import logging
 from pathlib import Path
 from typing import List, Tuple, Optional
 import time
+import signal
+import threading
+import multiprocessing
 
 logging.basicConfig(level=logging.INFO)
 
@@ -111,6 +114,29 @@ def get_metadata(file_path: str, metadata_folder: str) -> List[dict]:
     return metadata_list
 
 
+class TimeoutException(Exception):
+    pass
+
+
+def timeout_handler(signum, frame):
+    raise TimeoutException
+
+
+signal.signal(signal.SIGALRM, timeout_handler)
+
+
+def run_verification(path_qasm_a: str, path_qasm_b: str,
+                     result_queue: multiprocessing.Queue):
+    try:
+        result = qcec.verify(
+            str(path_qasm_a),
+            str(path_qasm_b),
+            transform_dynamic_circuit=True)
+        result_queue.put({"equivalence": str(result.equivalence)})
+    except Exception as e:
+        result_queue.put({"equivalence": f"error: {e}"})
+
+
 def process_files(input_folder: str, comparison_folder: str,
                   metadata_folder: str):
     input_path = Path(input_folder)
@@ -137,7 +163,7 @@ def process_files(input_folder: str, comparison_folder: str,
             groups[prefix] = []
         groups[prefix].append(str(file))
 
-    for prefix, group in groups.items():
+    for prefix, group in sorted(groups.items()):
         logging.info(f"Processing group with prefix {prefix}")
         group.sort(key=lambda x: int(Path(x).stem[:7]))
         comparator = MostDifferentQASMsComparatorPicker()
@@ -146,18 +172,24 @@ def process_files(input_folder: str, comparison_folder: str,
         for path_qasm_a, path_qasm_b in pairs:
             logging.info(f"Comparing {path_qasm_a} and {path_qasm_b}")
             start_time = time.time()
-            try:
-                result = qcec.verify(
-                    str(path_qasm_a),
-                    str(path_qasm_b),
-                    transform_dynamic_circuit=True)
-                equivalence = str(result.equivalence)
-            except Exception as e:
-                logging.error(f"Error during QCEC verification: {e}")
-                equivalence = f"error: {e}"
-            finally:
-                end_time = time.time()
-                comparator_time = end_time - start_time
+            result_queue = multiprocessing.Queue()
+            verification_process = multiprocessing.Process(
+                target=run_verification,
+                args=(path_qasm_a, path_qasm_b, result_queue))
+            verification_process.start()
+            verification_process.join(timeout=5)  # Wait for 5 seconds
+
+            if verification_process.is_alive():
+                logging.error(
+                    f"Comparison between {path_qasm_a} and {path_qasm_b} timed out.")
+                verification_process.terminate()
+                verification_process.join()
+                result_dict = {"equivalence": "timeout"}
+            else:
+                result_dict = result_queue.get()
+
+            end_time = time.time()
+            comparator_time = end_time - start_time
 
             metadata_a = get_metadata(path_qasm_a, metadata_folder)
             metadata_b = get_metadata(path_qasm_b, metadata_folder)
@@ -174,7 +206,7 @@ def process_files(input_folder: str, comparison_folder: str,
                         "platform", "generator")
                      if metadata_b else "generator",
                      "provenance_tree": metadata_b}],
-                "equivalence": equivalence,
+                "equivalence": result_dict['equivalence'],
                 "comparator_time": comparator_time}
 
             output_path = comparison_path / \
