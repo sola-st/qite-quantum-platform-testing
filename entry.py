@@ -95,21 +95,48 @@ from typing import Dict, Any, List
 import click
 from rich.console import Console
 from tempfile import NamedTemporaryFile
+import signal
 
 console = Console()
 
 
-def load_config(config_file: Path) -> Dict[str, Any]:
+def fill_and_load_config(config_file: Path) -> Dict[str, Any]:
+    """
+    Load the YAML configuration file and replace specific placeholders.
+    This function reads a YAML configuration file and replaces the following placeholders:
+    - <<RUN_FOLDER>>: Replaced with the current date and time in the format '%Y_%m_%d__%H_%M'.
+    - <<THIS_FILE_NAME>>: Replaced with the filename of the YAML file without its extension.
+    - <<BATCH_SIZE>>: Replaced with the value of the 'batch_size' field in the configuration file.
+      If 'batch_size' is not present in the configuration file but the placeholder is present,
+      an exception is raised.
+    Args:
+        config_file (Path): The path to the YAML configuration file.
+    Returns:
+        Dict[str, Any]: The loaded configuration as a dictionary.
+    Raises:
+        Exception: If 'batch_size' is not present in the configuration file but the placeholder
+                   '<<BATCH_SIZE>>' is present in the file content.
+    """
     """Load the YAML configuration file."""
     # replace the keywords:
     # <<RUN_FOLDER>> -> '%Y_%m_%d__%H_%M'
     # <<THIS_FILE_NAME>> -> filename of the yaml file without extension
+    # <<BATCH_SIZE>> -> value in the field batch_size (this is useful for
+    # continuous mode)
 
     raw_config = config_file.read_text()
     raw_config = raw_config.replace(
         '<<RUN_FOLDER>>', datetime.datetime.now().strftime('%Y_%m_%d__%H_%M'))
     raw_config = raw_config.replace(
         '<<THIS_FILE_NAME>>', config_file.stem)
+
+    try:
+        config_dict = yaml.safe_load(raw_config)
+        raw_config = raw_config.replace(
+            '<<BATCH_SIZE>>', str(config_dict['batch_size']))
+    except KeyError:
+        raise Exception(
+            "Placeholder '<<BATCH_SIZE>>' found but 'batch_size' is not defined in the config file.")
 
     return yaml.safe_load(raw_config)
 
@@ -163,14 +190,32 @@ def run_command(command: str, use_screen: bool, log_file: Path) -> None:
     """Run the command, optionally inside a screen."""
     if use_screen:
         screen_cmd = (
-            f"screen -L -Logfile {log_file} -dm {command}"
+            f"screen -L -Logfile {log_file} -m {command}"
         )
-        subprocess.run(screen_cmd, shell=True)
         console.print(
             f"[bold blue]Command running in screen session.[/bold blue]")
+        result = subprocess.run(screen_cmd, shell=True, check=True)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Command failed with return code {result.returncode}")
     else:
-        os.system(command)
+        result = subprocess.run(command, shell=True, check=True)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Command failed with return code {result.returncode}")
         console.print(f"[bold blue]Command executed.[/bold blue]")
+
+
+def replace_program_range(config, program_range: List[int]) -> Dict[str, Any]:
+    """Replace the program range in the config."""
+    new_config = config.copy()
+    new_commands = []
+    for command in new_config['commands']:
+        new_command = command.copy()
+        new_command['config']['program_id_range'] = program_range
+        new_commands.append(new_command)
+    new_config['commands'] = new_commands
+    return new_config
 
 
 @click.command()
@@ -178,26 +223,68 @@ def run_command(command: str, use_screen: bool, log_file: Path) -> None:
               required=True, help="Path to the YAML config file.")
 @click.option('--screen', is_flag=True,
               help="Run command in a screen session.")
-def main(config: str, screen: bool) -> None:
+@click.option('--continuous_fuzzing', is_flag=True, default=False,
+              help="Enable continuous fuzzing mode.")
+def main(config: str, screen: bool, continuous_fuzzing: bool) -> None:
     """Main function to execute the command based on the YAML config."""
     config_file = Path(config)
-    config_data = load_config(config_file)
+    config_data = fill_and_load_config(config_file)
 
     # Log file setup
     log_file = create_log_file(config_file)
     dump_config_to_log(config=config_data, log_file=log_file)
 
-    # Build and run the command
-    if 'commands' in config_data:
-        for idx, command_config in enumerate(config_data['commands'], start=1):
-            command = build_command(command_config=command_config)
-            console.print(
-                f"[bold yellow]Command {idx})\n{command}[/bold yellow]")
-            run_command(command=command, use_screen=screen, log_file=log_file)
-    else:
-        command = build_command(command_config=config_data['command'])
-        console.print(f"[bold yellow]Command to run:\n{command}[/bold yellow]")
-        run_command(command=command, use_screen=screen, log_file=log_file)
+    if continuous_fuzzing:
+        console.print("[bold red]Continuous fuzzing mode enabled.[/bold red]")
+
+    batch_size = config_data.get('batch_size')
+    budget_time_sec = config_data.get('budget_time_sec', None)
+    if budget_time_sec:
+        console.print(
+            f"[bold red]Budget time set to {budget_time_sec} seconds.[/bold red]")
+
+    def timeout_handler(signum, frame):
+        console.print("[bold red]Timeout expired. Exiting...[/bold red]")
+        raise TimeoutError
+
+    if budget_time_sec:
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(budget_time_sec)
+
+    try:
+        batch_number = 0
+        while True:
+            program_range = [
+                batch_number * batch_size,
+                (batch_number + 1) * batch_size
+            ]
+            batch_number += 1
+            config_data = replace_program_range(config_data, program_range)
+            # Build and run the command
+            if 'commands' in config_data:
+                for idx, command_config in enumerate(
+                        config_data['commands'],
+                        start=1):
+                    command = build_command(command_config=command_config)
+                    console.print(
+                        f"[bold yellow]Command {idx})\n{command}[/bold yellow]")
+                    run_command(command=command, use_screen=screen,
+                                log_file=log_file)
+            else:
+                command = build_command(command_config=config_data['command'])
+                console.print(
+                    f"[bold yellow]Command to run:\n{command}[/bold yellow]")
+                run_command(command=command, use_screen=screen,
+                            log_file=log_file)
+
+            if not continuous_fuzzing:
+                break
+
+    except TimeoutError:
+        pass
+    finally:
+        if budget_time_sec:
+            signal.alarm(0)
 
 
 if __name__ == '__main__':

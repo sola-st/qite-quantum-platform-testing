@@ -6,17 +6,11 @@ from pathlib import Path
 from typing import Optional, List
 from rich.console import Console
 
-from qite.processors.qiskit_processor import QiskitProcessor
-from qite.processors.pytket_processor import PytketProcessor
-from qite.processors.pennylane_processor import PennyLaneProcessor
-
-from qite.transforms.pytket_transforms import list_pytket_transformers
-from qite.transforms.pennylane_transforms import list_pennylane_transformers
-from qite.transforms.qiskit_transforms import list_qiskit_transformers
 
 from qite.base.primitives import Transformer
 
 import signal
+import coverage
 # from validate.bqskit_processor import (
 #     BQSKitProcessor,
 #     BQSKitOptimizer
@@ -67,51 +61,87 @@ The goal is to be able to import that function also from other files.
 console = Console(color_system=None)
 
 
-PLATFORMS = {
-    "qiskit": {
-        "processor_class": QiskitProcessor,
-        "transformers": list_qiskit_transformers
-    },
-    "pytket": {
-        "processor_class": PytketProcessor,
-        "transformers": list_pytket_transformers
-    },
-    "pennylane": {
-        "processor_class": PennyLaneProcessor,
-        "transformers": list_pennylane_transformers
+def lazy_imports():
+    # Imports are here so that they are counted in the round coverage
+    from qite.processors.qiskit_processor import QiskitProcessor
+    from qite.processors.pytket_processor import PytketProcessor
+    from qite.processors.pennylane_processor import PennyLaneProcessor
+    from qite.transforms.pytket_transforms import list_pytket_transformers
+    from qite.transforms.pennylane_transforms import list_pennylane_transformers
+    from qite.transforms.qiskit_transforms import list_qiskit_transformers
+    PLATFORMS = {
+        "qiskit": {
+            "processor_class": QiskitProcessor,
+            "transformers": list_qiskit_transformers
+        },
+        "pytket": {
+            "processor_class": PytketProcessor,
+            "transformers": list_pytket_transformers
+        },
+        "pennylane": {
+            "processor_class": PennyLaneProcessor,
+            "transformers": list_pennylane_transformers
+        }
     }
-}
+    return PLATFORMS
 
 
 def apply_qite_algorithm(
         input_folder: str, number_of_rounds: int, n_transform_iter: int,
-        platforms_to_run: List[str]) -> None:
+        platforms_to_run: List[str], template_coverage_file: str,
+        program_id_range: Optional[List[int]]) -> None:
+    """Apply the QITE algorithm to the QASM programs."""
     input_path = Path(input_folder)
     qasm_files = sorted(list(input_path.glob("*.qasm")))
+
+    if program_id_range:
+        qasm_files = [qasm_file for qasm_file in qasm_files
+                      if program_id_range[0] <=
+                      int(qasm_file.stem.split('_')[0]) <=
+                      program_id_range[1]]
+
     qasm_to_process_this_round = qasm_files
 
     stats_file = input_path / "_qite_stats.txt"
     for round_num in range(number_of_rounds):
+        output_folder_coverage_round = input_path / \
+            f"cov_round_{round_num + 1}"
+        cov = prepare_coverage_file(
+            template_coverage_file=template_coverage_file,
+            output_folder=output_folder_coverage_round,
+            platforms=platforms_to_run
+        )
+        cov.start()
         console.log(f"Round {round_num + 1}/{number_of_rounds}")
         qasm_generated_this_round = []
         for qasm_file in qasm_to_process_this_round:
             new_qasm = process_qasm_file(
                 qasm_file=qasm_file,
                 n_transform_iter=n_transform_iter,
-                platforms_to_run=platforms_to_run)
+                platforms_to_run=platforms_to_run,
+                round_number=round_num + 1)
             if new_qasm:
                 qasm_generated_this_round.append(new_qasm)
         qasm_to_process_this_round = sorted(qasm_generated_this_round)
         n_generated = len(qasm_to_process_this_round)
         console.log(f"Generated {n_generated} new QASM programs.")
+        cov.stop()
+        cov.save()
+        cov.xml_report(
+            outfile=str(output_folder_coverage_round / 'coverage.xml'),
+            ignore_errors=True
+        )
+
         with stats_file.open("a") as f:
             f.write(f'{{"round": {round_num + 1}, "n_program": {n_generated}}}\n')
 
 
 def process_qasm_file(
         qasm_file: Path, n_transform_iter: int,
-        platforms_to_run: List[str]) -> Optional[Path]:
-    console.log(f"QITE ({n_transform_iter}) -> {qasm_file}")
+        platforms_to_run: List[str], round_number: int) -> Optional[Path]:
+    PLATFORMS = lazy_imports()
+    console.log(
+        f"QITE (R{str(round_number).zfill(3)}-T{str(n_transform_iter).zfill(3)}) -> {qasm_file}")
     metadata_folder = qasm_file.parent / "metadata"
     error_folder = qasm_file.parent / "error"
     metadata_folder.mkdir(exist_ok=True)
@@ -127,6 +157,7 @@ def process_qasm_file(
             error_folder=error_folder,
             output_folder=qasm_file.parent
         )
+        processor.set_round(round_number)
         selected_transformers = (
             random.sample(transformers, n_transform_iter)
             if n_transform_iter < len(transformers)
@@ -171,6 +202,75 @@ def process_qasm_file(
     return None
 
 
+def prepare_coverage_file(
+        template_coverage_file: str, output_folder: Path, platforms: List
+        [str]) -> coverage.Coverage:
+    """Prepare the coverage file for the QITE algorithm.
+
+    It copies the template coverage file to the output folder and replaces
+    the placeholders:
+    - {{FOLDER_WITH_DATA_FILE}} with the output folder.
+    - {{PLATFORMS_PACKAGES}} with the path to the platforms to cover.
+    """
+    with open(template_coverage_file, 'r') as file:
+        content = file.read()
+
+    content = content.replace('{{FOLDER_WITH_DATA_FILE}}', str(output_folder))
+    platforms_packages = ','.join(platforms)
+    content = content.replace('{{PLATFORMS_PACKAGES}}', platforms_packages)
+
+    output_folder.mkdir(parents=True, exist_ok=True)
+    coverage_file_path = output_folder / 'coverage.rc'
+    with coverage_file_path.open('w') as file:
+        file.write(content)
+
+    # Initialize a Coverage object with the newly created .coveragerc configuration
+    cov = coverage.Coverage(config_file=str(coverage_file_path))
+    return cov
+
+
+def post_process_coverage(
+        input_folder: str, number_of_rounds: int,
+        template_coverage_file: str, platforms_to_run: List[str]) -> None:
+    """Create overall coverage report."""
+    cumulative_coverage_folder = Path(input_folder) / 'cumulative_coverage'
+    cumulative_coverage_folder.mkdir(parents=True, exist_ok=True)
+    console.log("Processing coverage...")
+    for i in range(1, number_of_rounds + 1):
+        console.log(f"Processing round {i}")
+        cov = prepare_coverage_file(
+            template_coverage_file=template_coverage_file,
+            output_folder=Path(input_folder),
+            platforms=platforms_to_run
+        )
+        cov.combine(
+            data_paths=[
+                str(Path(input_folder) / f'cov_round_{j}')
+                for j in range(1, i + 1)],
+            keep=True)
+        cov.xml_report(
+            outfile=str(
+                cumulative_coverage_folder /
+                f'coverage_up_to_{i}.xml'),
+            ignore_errors=True)
+
+    # Create the final overall coverage report
+    cov = prepare_coverage_file(
+        template_coverage_file=template_coverage_file,
+        output_folder=Path(input_folder),
+        platforms=platforms_to_run
+    )
+    cov.combine(
+        data_paths=[
+            str(Path(input_folder) / f'cov_round_{i}')
+            for i in range(1, number_of_rounds + 1)],
+        keep=True)
+    cov.xml_report(
+        outfile=str(Path(input_folder) / 'coverage.xml'),
+        ignore_errors=True
+    )
+
+
 @click.command()
 @click.option('--input_folder', required=True, type=str,
               help='Folder containing the QASM programs.')
@@ -185,6 +285,7 @@ def main(
         config: Optional[str]) -> None:
 
     # by default run all platforms
+    PLATFORMS = lazy_imports()
     platforms_to_run = PLATFORMS.keys()
 
     if config:
@@ -196,15 +297,27 @@ def main(
         n_transform_iter = config_data.get(
             'n_transform_iter', n_transform_iter)
         selected_platforms = config_data.get('platforms', [])
+        program_id_range = config_data.get('program_id_range')
         platforms_to_run = [
             platform for platform in selected_platforms
             if platform in PLATFORMS.keys()
         ]
+        template_coverage_file = config_data.get('template_coverage_file')
+        apply_qite_algorithm(input_folder=input_folder,
+                             number_of_rounds=number_of_rounds,
+                             n_transform_iter=n_transform_iter,
+                             platforms_to_run=platforms_to_run,
+                             template_coverage_file=template_coverage_file,
+                             program_id_range=program_id_range)
+        post_process_coverage(
+            input_folder=input_folder,
+            number_of_rounds=number_of_rounds,
+            template_coverage_file=template_coverage_file,
+            platforms_to_run=platforms_to_run
+        )
 
-    apply_qite_algorithm(input_folder=input_folder,
-                         number_of_rounds=number_of_rounds,
-                         n_transform_iter=n_transform_iter,
-                         platforms_to_run=platforms_to_run)
+    else:
+        print('No config file provided')
 
 
 if __name__ == "__main__":

@@ -69,6 +69,7 @@ import time
 import signal
 import threading
 import multiprocessing
+import yaml
 
 logging.basicConfig(level=logging.INFO)
 
@@ -138,7 +139,8 @@ def run_verification(path_qasm_a: str, path_qasm_b: str,
 
 
 def process_files(input_folder: str, comparison_folder: str,
-                  metadata_folder: str):
+                  metadata_folder: str,
+                  program_id_range: Optional[List[int]] = None):
     input_path = Path(input_folder)
     comparison_path = Path(comparison_folder)
     metadata_path = Path(metadata_folder)
@@ -151,6 +153,11 @@ def process_files(input_folder: str, comparison_folder: str,
     qasm_files = [
         f for f in input_path.iterdir()
         if f.suffix == '.qasm' and f.is_file()]
+
+    if program_id_range:
+        qasm_files = [f for f in qasm_files if program_id_range[0]
+                      <= int(f.stem[:7]) <= program_id_range[1]]
+
     groups = {}
     for file in qasm_files:
         prefix = file.stem[:7]
@@ -223,9 +230,27 @@ def process_files(input_folder: str, comparison_folder: str,
     file_okay=False, dir_okay=True))
 @click.option('--metadata_folder', required=True, type=click.Path(
     exists=True, file_okay=False, dir_okay=True))
-def main(input_folder: str, comparison_folder: str, metadata_folder: str):
+@click.option('--config', type=click.Path(exists=True), default=None,
+              help='Path to the config file (YAML).')
+@click.option('--program_id_range', type=(int, int), default=None,
+              help='Range of program IDs to process (start, end).')
+def main(
+        input_folder: str, comparison_folder: str, metadata_folder: str,
+        config: Optional[str],
+        program_id_range: Optional[Tuple[int, int]]):
+    if config:
+        with open(config, 'r') as f:
+            config_data = yaml.safe_load(f)
+        input_folder = config_data.get('input_folder', input_folder)
+        comparison_folder = config_data.get(
+            'comparison_folder', comparison_folder)
+        metadata_folder = config_data.get('metadata_folder', metadata_folder)
+        program_id_range = config_data.get(
+            'program_id_range', program_id_range)
+
     logging.info("Starting the process")
-    process_files(input_folder, comparison_folder, metadata_folder)
+    process_files(input_folder, comparison_folder,
+                  metadata_folder, program_id_range)
     logging.info("Process completed")
 
 

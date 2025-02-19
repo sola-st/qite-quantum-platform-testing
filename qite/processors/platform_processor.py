@@ -83,6 +83,11 @@ class PlatformProcessor:
         logger.info(
             f"Metadata folder set to: {metadata_folder}, Error folder set to: {error_folder}")
 
+    def set_round(self, round_number: int):
+        """Sets the current round number."""
+        self.round_number = round_number
+        logger.info(f"Round number set to: {round_number}")
+
     def execute_qite_loop(
             self, qasm_file, raise_any_exception: bool = False,
             print_intermediate_qasm: bool = False,
@@ -92,6 +97,7 @@ class PlatformProcessor:
         self.current_status = {
             "input_qasm": qasm_file,
             "platform": self.name,
+            "round": self.round_number,
             "importer_function": None,
             "transformer_functions": [],
             "exporter_function": None,
