@@ -66,9 +66,11 @@ def lazy_imports():
     from qite.processors.qiskit_processor import QiskitProcessor
     from qite.processors.pytket_processor import PytketProcessor
     from qite.processors.pennylane_processor import PennyLaneProcessor
+    from qite.processors.bqskit_processor import BQSKitProcessor
     from qite.transforms.pytket_transforms import list_pytket_transformers
     from qite.transforms.pennylane_transforms import list_pennylane_transformers
     from qite.transforms.qiskit_transforms import list_qiskit_transformers
+    from qite.transforms.bqskit_transforms import list_bqskit_transformers
     PLATFORMS = {
         "qiskit": {
             "processor_class": QiskitProcessor,
@@ -81,6 +83,10 @@ def lazy_imports():
         "pennylane": {
             "processor_class": PennyLaneProcessor,
             "transformers": list_pennylane_transformers
+        },
+        "bqskit": {
+            "processor_class": BQSKitProcessor,
+            "transformers": list_bqskit_transformers
         }
     }
     return PLATFORMS
@@ -89,7 +95,7 @@ def lazy_imports():
 def apply_qite_algorithm(
         input_folder: str, number_of_rounds: int, n_transform_iter: int,
         platforms_to_run: List[str], template_coverage_file: str,
-        program_id_range: Optional[List[int]]) -> None:
+        program_id_range: Optional[List[int]], coverage_enabled: bool) -> None:
     """Apply the QITE algorithm to the QASM programs."""
     input_path = Path(input_folder)
     qasm_files = sorted(list(input_path.glob("*.qasm")))
@@ -104,14 +110,15 @@ def apply_qite_algorithm(
 
     stats_file = input_path / "_qite_stats.txt"
     for round_num in range(number_of_rounds):
-        output_folder_coverage_round = input_path / \
-            f"cov_round_{round_num + 1}"
-        cov = prepare_coverage_file(
-            template_coverage_file=template_coverage_file,
-            output_folder=output_folder_coverage_round,
-            platforms=platforms_to_run
-        )
-        cov.start()
+        if coverage_enabled:
+            output_folder_coverage_round = input_path / \
+                f"cov_round_{round_num + 1}"
+            cov = prepare_coverage_file(
+                template_coverage_file=template_coverage_file,
+                output_folder=output_folder_coverage_round,
+                platforms=platforms_to_run
+            )
+            cov.start()
         console.log(f"Round {round_num + 1}/{number_of_rounds}")
         qasm_generated_this_round = []
         for qasm_file in qasm_to_process_this_round:
@@ -125,12 +132,13 @@ def apply_qite_algorithm(
         qasm_to_process_this_round = sorted(qasm_generated_this_round)
         n_generated = len(qasm_to_process_this_round)
         console.log(f"Generated {n_generated} new QASM programs.")
-        cov.stop()
-        cov.save()
-        cov.xml_report(
-            outfile=str(output_folder_coverage_round / 'coverage.xml'),
-            ignore_errors=True
-        )
+        if coverage_enabled:
+            cov.stop()
+            cov.save()
+            cov.xml_report(
+                outfile=str(output_folder_coverage_round / 'coverage.xml'),
+                ignore_errors=True
+            )
 
         with stats_file.open("a") as f:
             f.write(f'{{"round": {round_num + 1}, "n_program": {n_generated}}}\n')
@@ -287,6 +295,7 @@ def main(
     # by default run all platforms
     PLATFORMS = lazy_imports()
     platforms_to_run = PLATFORMS.keys()
+    coverage_enabled = False
 
     if config:
         with open(config, 'r') as f:
@@ -303,18 +312,23 @@ def main(
             if platform in PLATFORMS.keys()
         ]
         template_coverage_file = config_data.get('template_coverage_file')
+        coverage_enabled = config_data.get('coverage', False)
+
         apply_qite_algorithm(input_folder=input_folder,
                              number_of_rounds=number_of_rounds,
                              n_transform_iter=n_transform_iter,
                              platforms_to_run=platforms_to_run,
                              template_coverage_file=template_coverage_file,
-                             program_id_range=program_id_range)
-        post_process_coverage(
-            input_folder=input_folder,
-            number_of_rounds=number_of_rounds,
-            template_coverage_file=template_coverage_file,
-            platforms_to_run=platforms_to_run
-        )
+                             program_id_range=program_id_range,
+                             coverage_enabled=coverage_enabled)
+
+        if coverage_enabled:
+            post_process_coverage(
+                input_folder=input_folder,
+                number_of_rounds=number_of_rounds,
+                template_coverage_file=template_coverage_file,
+                platforms_to_run=platforms_to_run
+            )
 
     else:
         print('No config file provided')

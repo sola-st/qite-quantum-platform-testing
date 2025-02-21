@@ -8,6 +8,7 @@ from typing import Dict, Any, List
 from qite.processors.qiskit_processor import QiskitProcessor
 from qite.processors.pytket_processor import PytketProcessor
 from qite.processors.pennylane_processor import PennyLaneProcessor
+from qite.processors.bqskit_processor import BQSKitProcessor
 from qite.processors.platform_processor import PlatformProcessor
 from qite.transform_ops import transform_lookup
 from qite.base.primitives import Transformer
@@ -107,12 +108,20 @@ def setup_processor(
             error_folder=output_folder,
             output_folder=output_folder
         )
+    elif processor_name == "bqskit":
+        processor = BQSKitProcessor(
+            metadata_folder=output_folder,
+            error_folder=output_folder,
+            output_folder=output_folder
+        )
     else:
         raise ValueError(f"Unsupported platform: {processor_name}")
 
     transformers = pick_relevant_transformers(metadata)
     for transformer in transformers:
         processor.add_transformer(transformer)
+    current_round = metadata.get("round", 0)
+    processor.set_round(current_round)
     return processor
 
 
