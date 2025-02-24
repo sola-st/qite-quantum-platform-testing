@@ -9,7 +9,7 @@ from rich.console import Console
 from tqdm import tqdm
 
 from qite.qite_replay import run_qite_chain
-from analysis_and_reporting.ddmin import DDMin
+from qite.inspection.ddmin import DDMin
 from mqt import qcec
 
 import tempfile

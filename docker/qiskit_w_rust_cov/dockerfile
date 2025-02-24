@@ -86,6 +86,27 @@ COPY . /home/regularuser/qiskit
 RUN echo "source .venv/bin/activate" >> /home/regularuser/.bashrc
 RUN rm qiskit-*.profraw
 
+RUN mkdir -p /home/regularuser/app && chown -R regularuser:regularuser /home/regularuser/app
+
+RUN . .venv/bin/activate && pip install \
+    qiskit-aer==0.15.1 \
+    qiskit-ibm-runtime==0.29.0 \
+    pytket==1.32.0 \
+    pytket-qiskit==0.56.0 \
+    PennyLane==0.40.0 \
+    PennyLane-qiskit==0.40.0 \
+    mqt.qcec==2.8.1 \
+    bqskit==1.2.0 \
+    pyzx==0.8.0 \
+    slipcover==1.0.15 \
+    pytest==8.3.3 \
+    click \
+    numpy \
+    scipy \
+    rich \
+    matplotlib \
+    pandas \
+    seaborn
 
 
 # Set the default command to run the Python script

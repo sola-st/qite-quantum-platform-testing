@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 import click
 from qite.qite_replay import run_qite
-from analysis_and_reporting.ddmin import DDMin
+from qite.inspection.ddmin import DDMin
 from rich.console import Console
 
 

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qite"
+version = "0.1.0"
+dependencies = [
+    "click",
+    "rich",
+    "pyyaml",
+    "pytest",
+    "pytest-cov",
+    "qiskit==1.2.4",
+    "qiskit-aer==0.15.1",
+    "qiskit-ibm-runtime==0.29.0",
+    "pytket==1.32.0",
+    "pytket-qiskit==0.56.0",
+    "pennylane==0.40.0",
+    "PennyLane-qiskit==0.40.0",
+    "bqskit==1.2.0",
+    "numpy",
+    "scipy",
+]

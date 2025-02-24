@@ -123,6 +123,32 @@ lcov_cobertura -e '^(?!crates).*$' coverage.lcov -o coverage.xml
     3.  Run the script with the necessary environment variables set for coverage collection: `python /tmp/test.py`.
     4.  Check if the `qiskit-*.profraw` files are generated in the expected location.
 
+```shell
+# run docker with the mounting of base_qc_w_opt.py in tmp
+docker run -it --rm -v $(pwd)/container_accessible_folder:/home/regularuser/host -v $(pwd)/base_qc_w_opt.py:/tmp/base_qc_w_opt.py qiskit_w_rust /bin/bash
+# inside the docker
+cd /tmp
+python base_qc_w_opt.py
+# check if the .profraw files are generated
+ls -l /home/regularuser/qiskit/qiskit-*.profraw
+# ANSWER:
+# No. if the PWD is not /home/regularuser/qiskit/
+# Yes, if the file is located somewhere else but we call it with absolute path from the /home/regularuser/qiskit/ as PWD
+```
+This works:
+
+```shell
+# run docker with the mounting of base_qc_w_opt.py in tmp
+docker run -it --rm -v $(pwd)/container_accessible_folder:/home/regularuser/host -v $(pwd)/base_qc_w_opt.py:/tmp/base_qc_w_opt.py qiskit_w_rust /bin/bash
+# inside the docker
+cd /home/regularuser/qiskit
+python /tmp/base_qc_w_opt.py
+# check if the .profraw files are generated
+ls -l /home/regularuser/qiskit/qiskit-*.profraw
+# ANSWER:
+# Yes
+```
+
 ### Scenario 2: Combined Python and Rust Coverage
 
 *   **Hypothesis:** Python coverage (using `coverage.py`) and Rust coverage (using `llvm-cov`) can be collected simultaneously without interference.
@@ -130,6 +156,18 @@ lcov_cobertura -e '^(?!crates).*$' coverage.lcov -o coverage.xml
     1.  Run a Python script that imports Qiskit modules and is instrumented for Python coverage: `coverage run my_python_script.py`.
     2.  After the Python script finishes, run the `llvm-cov` commands to generate Rust coverage reports.
     3.  Verify that both Python coverage data (`.coverage` file) and Rust coverage data (`coverage.lcov`, `coverage.xml`) are generated correctly.
+
+```shell
+# run docker with the mounting of base_qc_w_coverage.py in tmp
+docker run -it --rm -v $(pwd)/container_accessible_folder:/home/regularuser/host -v $(pwd)/base_qc_w_coverage.py:/tmp/base_qc_w_coverage.py qiskit_w_rust /bin/bash
+# inside the docker
+cd /home/regularuser/qiskit
+python /tmp/base_qc_w_coverage.py  # coverage is run programmatically in the script
+# check if the .coverage file is generated
+ls -l /home/regularuser/qiskit/.coverage
+# copy the coverage_python.xml to the host
+cp /home/regularuser/qiskit/coverage_python.xml /home/regularuser/host
+```
 
 ### Scenario 3: Installing New Dependencies
 
@@ -140,6 +178,23 @@ lcov_cobertura -e '^(?!crates).*$' coverage.lcov -o coverage.xml
     3.  Run the Python script that imports Qiskit modules and triggers Rust code execution.
     4.  Run the `llvm-cov` commands to generate Rust coverage reports.
     5.  Verify that the Rust coverage data is still collected correctly after installing the new dependency.
+
+```shell
+# run docker with the mounting of base_qc_w_opt.py in tmp
+docker run -it --rm -v $(pwd)/container_accessible_folder:/home/regularuser/host -v $(pwd)/base_qc_w_opt.py:/tmp/base_qc_w_opt.py qiskit_w_rust /bin/bash
+# inside the docker
+cd /home/regularuser/qiskit
+pip install qiskit-aer==0.15.1 qiskit-ibm-runtime==0.29.0 pytket==1.33.1 pytket-qiskit==0.56.0 PennyLane==0.40.0 PennyLane-qiskit==0.40.0 mqt.qcec==2.8.1 bqskit==1.2.0
+python /tmp/base_qc_w_opt.py
+# check if the .profraw files are generated
+ls -l /home/regularuser/qiskit/qiskit-*.profraw
+# ANSWER:
+# Yes
+```
+
+
+
+
 ### Scenario 4: Mounting and Running Python Software from a Random Folder
 
 *   **Hypothesis:** Mounting a Python software package into the Docker container from a host directory and running it will allow for the cumulative collection of both Rust and Python coverage data.
@@ -150,3 +205,31 @@ lcov_cobertura -e '^(?!crates).*$' coverage.lcov -o coverage.xml
     4.  Generate the Python coverage report using `coverage xml`.
     5.  Run the `llvm-cov` commands to generate Rust coverage reports (`coverage.lcov`, `coverage.xml`).
     6.  Verify that both Python and Rust coverage data are generated and that the reports accurately reflect the coverage from the mounted Python software.
+
+```shell
+# run docker with the mounting:
+# ---
+# pwd:program bank >> /home/regularuser/qiskit/program_bank
+# pwd:config >> /home/regularuser/qiskit/config
+# pwd:logs >> /home/regularuser/qiskit/logs
+# pwd:entry.py >> /home/regularuser/qiskit/entry.py
+# ---
+# pwd:qite >> /home/regularuser/app/qite
+# pwd:pyproject.toml >> /home/regularuser/app/pyproject.toml
+
+# FROM REPO ROOT
+docker run -it --rm -v $(pwd)/docker/qiskit_w_rust_cov/container_accessible_folder:/home/regularuser/host -v $(pwd)/program_bank:/home/regularuser/qiskit/program_bank -v $(pwd)/config:/home/regularuser/qiskit/config -v $(pwd)/entry.py:/home/regularuser/qiskit/entry.py -v $(pwd)/qite:/home/regularuser/app/qite -v $(pwd)/pyproject.toml:/home/regularuser/app/pyproject.toml qiskit_w_rust /bin/bash
+# inside the docker
+cd /home/regularuser/app
+pip install -e .
+cd /home/regularuser/qiskit
+python entry.py --config config/v038.yaml
+
+# collect coverage from rust
+llvm-profdata merge -sparse qiskit-*.profraw -o my_program.profdata && \
+llvm-cov export -Xdemangler=rustfilt target/debug/libqiskit_pyext.so --instr-profile=my_program.profdata --format=lcov --ignore-filename-regex='^(?!crates).*$' > coverage.lcov && \
+lcov_cobertura -e '^(?!crates).*$' coverage.lcov -o rust_coverage.xml
+# copy the rust_coverage.xml to the host
+# find the latest subfolder in v038 and store the rust_coverage.xml there
+latest_subfolder=$(ls -d /home/regularuser/qiskit/program_bank/v038/*/ | sort | tail -n 1) && cp rust_coverage.xml "$latest_subfolder"
+```
