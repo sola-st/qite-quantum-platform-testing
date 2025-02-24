@@ -223,13 +223,13 @@ docker run -it --rm -v $(pwd)/docker/qiskit_w_rust_cov/container_accessible_fold
 cd /home/regularuser/app
 pip install -e .
 cd /home/regularuser/qiskit
-python entry.py --config config/v038.yaml
+python entry.py --config config/v040.yaml --continuous_fuzzing
 
 # collect coverage from rust
 llvm-profdata merge -sparse qiskit-*.profraw -o my_program.profdata && \
 llvm-cov export -Xdemangler=rustfilt target/debug/libqiskit_pyext.so --instr-profile=my_program.profdata --format=lcov --ignore-filename-regex='^(?!crates).*$' > coverage.lcov && \
 lcov_cobertura -e '^(?!crates).*$' coverage.lcov -o rust_coverage.xml
 # copy the rust_coverage.xml to the host
-# find the latest subfolder in v038 and store the rust_coverage.xml there
-latest_subfolder=$(ls -d /home/regularuser/qiskit/program_bank/v038/*/ | sort | tail -n 1) && cp rust_coverage.xml "$latest_subfolder"
+# find the latest subfolder in v040 and store the rust_coverage.xml there
+latest_subfolder=$(ls -d /home/regularuser/qiskit/program_bank/v040/*/ | sort | tail -n 1) && cp rust_coverage.xml "$latest_subfolder"
 ```
