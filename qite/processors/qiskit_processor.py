@@ -1,6 +1,5 @@
 
 import os
-from qiskit import QuantumCircuit, transpile
 from qiskit.qasm2 import (
     load, dump, LEGACY_CUSTOM_INSTRUCTIONS
 )
@@ -8,7 +7,7 @@ from qite.processors.platform_processor import (
     PlatformProcessor
 )
 from qite.base.primitives import (
-    Importer, Transformer, Exporter
+    Importer, Exporter, Converter
 )
 
 
@@ -18,6 +17,7 @@ class QiskitProcessor(PlatformProcessor):
             metadata_folder, error_folder, output_folder)
         self.set_importer(QiskitImporter())
         self.set_exporter(QiskitExporter())
+        self.set_converter(QiskitConverter())
         self.name = "qiskit"
 
 
@@ -45,3 +45,11 @@ class QiskitExporter(Exporter):
             return qasm_path
         except Exception as e:
             raise e
+
+
+class QiskitConverter(Converter):
+    def __init__(self):
+        super().__init__("qiskit_convert")
+
+    def convert(self, qc_qiskit, *args, **kwargs):
+        return qc_qiskit

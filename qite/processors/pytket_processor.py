@@ -7,7 +7,7 @@ from qite.processors.platform_processor import (
     PlatformProcessor
 )
 from qite.base.primitives import (
-    Importer, Exporter
+    Importer, Exporter, Converter
 )
 
 
@@ -17,6 +17,7 @@ class PytketProcessor(PlatformProcessor):
             metadata_folder, error_folder, output_folder)
         self.set_importer(PytketImporter())
         self.set_exporter(PytketExporter())
+        self.set_converter(PytketConverter())
         self.name = "pytket"
 
 
@@ -45,5 +46,18 @@ class PytketExporter(Exporter):
             with open(qasm_path, 'w') as f:
                 f.write(qasm_str)
             return qasm_path
+        except Exception as e:
+            raise e
+
+
+class PytketConverter(Converter):
+    def __init__(self):
+        super().__init__("pytket_convert")
+
+    def convert(self, qc_qiskit, *args, **kwargs):
+        """Convert a Qiskit QuantumCircuit to a Pytket Circuit."""
+        try:
+            tk_circuit = qiskit_to_tk(qc_qiskit)
+            return tk_circuit
         except Exception as e:
             raise e

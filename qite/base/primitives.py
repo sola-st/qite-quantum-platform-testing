@@ -13,6 +13,7 @@ class CrashType(Enum):
     EXPORTER_CRASH = "exporter_crash"
     TRANSFORMER_CRASH = "transformer_crash"
     GENERIC_CRASH = "generic_crash"
+    CONVERTER_CRASH = "converter_crash"
 
 
 class Operation:
@@ -23,7 +24,10 @@ class Operation:
 
     def load_current_status(self, status: Dict[str, Any]):
         self.current_status = status
-        self.input_base_qasm_name = Path(status.get("input_qasm")).stem
+        if "input_qasm" in status:
+            self.input_base_qasm_name = Path(status.get("input_qasm")).stem
+        if "input_py" in status:
+            self.input_base_qasm_name = Path(status.get("input_py")).stem
 
     def execute(self):
         raise NotImplementedError
@@ -98,4 +102,15 @@ class Exporter(Operation):
         return self.export(qc_obj, path, *args, **kwargs)
 
     def export(self, qc_obj, path):
+        raise NotImplementedError
+
+
+class Converter(Operation):
+    def __init__(self, converter_name):
+        super().__init__(converter_name)
+
+    def execute(self, qc_qiskit, *args, **kwargs):
+        return self.convert(qc_qiskit, *args, **kwargs)
+
+    def convert(self, qc_qiskit):
         raise NotImplementedError

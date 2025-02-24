@@ -4,7 +4,7 @@ from pennylane.tape import make_qscript, QuantumScript
 from qite.processors.platform_processor import PlatformProcessor
 
 from qite.base.primitives import (
-    Importer, Transformer, Exporter
+    Importer, Exporter, Converter
 )
 
 
@@ -13,6 +13,7 @@ class PennyLaneProcessor(PlatformProcessor):
         super().__init__(metadata_folder, error_folder, output_folder)
         self.set_importer(PennyLaneImporter())
         self.set_exporter(PennyLaneExporter())
+        self.set_converter(PennyLaneConverter())
         self.name = "pennylane"
 
 
@@ -37,6 +38,7 @@ class PennyLaneExporter(Exporter):
     def export(self, circuit, path, filename="exported.qasm"):
         try:
             from pennylane.transforms import decompose
+
             dec_circuit = decompose(
                 circuit, {qml.RX, qml.RY, qml.RZ, qml.CNOT, qml.CZ})
             qasm_str = self._export_to_qasm_with_pennylane(dec_circuit)
@@ -78,3 +80,17 @@ class PennyLaneExporter(Exporter):
 
         qasm_str_pennylane = qs_no_meas.to_openqasm(measure_all=False)
         return qasm_str_pennylane
+
+
+class PennyLaneConverter(Converter):
+    def __init__(self):
+        super().__init__("pennylane_convert")
+
+    def convert(self, qc_qiskit, *args, **kwargs):
+        """Convert a Qiskit QuantumCircuit to a PennyLane QuantumCircuit."""
+        try:
+            import pennylane as qml
+            pn_circuit = qml.from_qiskit(qc_qiskit)
+            return pn_circuit
+        except Exception as e:
+            raise e

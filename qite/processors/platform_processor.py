@@ -49,6 +49,7 @@ class PlatformProcessor:
         self._importer = None
         self.transformers = []
         self._exporter = None
+        self._converter = None
         self.name = "base_class_processor"
         self.metadata_folder = metadata_folder
         self.error_folder = error_folder
@@ -66,6 +67,10 @@ class PlatformProcessor:
         self._exporter = exporter
         logger.info(f"Exporter set: {exporter}")
 
+    def set_converter(self, converter):
+        self._converter = converter
+        logger.info(f"Converter set: {converter}")
+
     def set_exception_handling(self, raise_any_exception: bool):
         """Iterates over all operations and sets the raise_any_exception attribute."""
         operations = {
@@ -76,8 +81,8 @@ class PlatformProcessor:
 
     def set_folders(self, metadata_folder, error_folder):
         """Sets the metadata and error folders for all operations."""
-        operations = {
-            self._importer, *self.transformers, self._exporter}
+        operations = {self._importer, *self.transformers,
+                      self._exporter, self._converter}
         for operation in operations:
             operation.set_folders(metadata_folder, error_folder)
         logger.info(
@@ -158,6 +163,56 @@ class PlatformProcessor:
 
         return Path(export_path)
 
+    def execute_conversion_loop(
+            self, circuit_file_name, qiskit_circ,
+            raise_any_exception: bool = False,
+            predefined_output_filename: Optional[str] = None) -> Optional[Path]:
+        logger.info(
+            f"Executing conversion loop with circuit file: {circuit_file_name}")
+        self.set_round(0)
+        self.current_status = {
+            "input_py": circuit_file_name,
+            "platform": self.name,
+            "round": 0,
+            "importer_function": None,
+            "transformer_functions": [],
+            "exporter_function": None,
+            "importer_time": None,
+            "transformation_time": [],
+            "exporter_time": None
+        }
+
+        base_output_name = Path(predefined_output_filename).stem \
+            if predefined_output_filename else circuit_file_name
+
+        self.set_exception_handling(raise_any_exception)
+        self.set_folders(
+            metadata_folder=self.metadata_folder,
+            error_folder=self.error_folder)
+
+        qc_platform = self._handle_conversion(qiskit_circ)
+        if isinstance(qc_platform, CrashType):
+            logger.info("Conversion failed, stopping process")
+            return None
+
+        exported_filename = f"{base_output_name}.qasm"
+        export_path = self._handle_export(
+            qc=qc_platform,
+            exported_filename=exported_filename)
+        if isinstance(export_path, CrashType):
+            logger.info("Export failed, stopping process")
+            return None
+
+        # store provenance metadata
+        metadata_output_filename = f"{base_output_name}.json"
+        metadata_path = os.path.join(
+            self.metadata_folder, metadata_output_filename)
+        with open(metadata_path, 'w') as f:
+            json.dump(self.current_status, f, indent=4)
+        logger.info(f"Metadata stored at: {metadata_path}")
+
+        return Path(export_path)
+
     def _print_as_qasm(self, qc):
         with tempfile.TemporaryDirectory() as tempdir:
             intermediate_output_filename = f"{uuid.uuid4()}.qasm"
@@ -189,3 +244,11 @@ class PlatformProcessor:
         self.current_status["exporter_time"] = time_op
         logger.info(f"QASM file exported to: {export_path}")
         return export_path
+
+    def _handle_conversion(self, qc_qiskit):
+        self._converter.load_current_status(self.current_status)
+        qc_converted, time_op = self._converter.run_with_time(qc_qiskit)
+        self.current_status["converter_function"] = self._converter.name
+        self.current_status["conversion_time"] = time_op
+        logger.info(f"Qiskit circuit converted with {self._converter.name}")
+        return qc_converted
