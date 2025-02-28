@@ -7,6 +7,7 @@ import click
 from qite.processors.platform_processor import PlatformProcessor
 from qite.qite_loop import lazy_imports
 import yaml
+import random
 
 """
 Here is a revised task description based on your additional requirements:
@@ -122,15 +123,16 @@ def process_files(
     for file_path in files_to_process:
         try:
             qc = get_qc_qiskit_from_file(file_path=str(file_path))
-            for platform in platforms:
-                print(f"Processing {file_path} for {platform}")
-                export_path = convert_and_export_to_qasm(
-                    qiskit_circ=qc,
-                    output_dir=str(input_folder),
-                    circuit_input_file_name=file_path.name,
-                    circuit_file_name=file_path.stem + f"_{platform}.qasm",
-                    platform=platform)
-                console.log(f"Exported {export_path}")
+            # pick random platorm
+            platform = random.choice(platforms)
+            print(f"Processing {file_path} for {platform}")
+            export_path = convert_and_export_to_qasm(
+                qiskit_circ=qc,
+                output_dir=str(input_folder),
+                circuit_input_file_name=file_path.name,
+                circuit_file_name=file_path.stem + ".qasm",
+                platform=platform)
+            console.log(f"Exported {export_path}")
         except Exception as e:
             console.log(f"Error processing {file_path}: {e}")
 

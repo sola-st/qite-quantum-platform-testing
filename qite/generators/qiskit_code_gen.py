@@ -517,7 +517,9 @@ GATE_MAP = {
     "rv": Rv, "rx": Rx, "rxx": Rxx, "ry": Ry,
     "ryy": Ryy, "rz": Rz, "rzx": Rzx, "rzz": Rzz, "s": S, "sdg": Sdg,
     "swap": Swap, "sx": Sx, "sxdg": Sxdg, "t": T, "tdg": Tdg,
-    "x": X, "y": Y, "z": Z}
+    "x": X, "y": Y, "z": Z,
+    "delay": Delay,
+}
 
 
 def create_random_gate(circuit_var: str, quantum_reg_var: str,
