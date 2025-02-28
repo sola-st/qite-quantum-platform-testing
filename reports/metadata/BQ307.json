@@ -1,0 +1,9 @@
+{
+    "exception_message": "Unrecognized gate: delay.",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/qiskit_circuit_5q_10g_4249_6b20ab.py\", line 273, in <module>\n    qasm_file = export_call(\n  File \"/workspace/qiskit_circuit_5q_10g_4249_6b20ab.py\", line 98, in export_to_qasm_with_bqskit\n    bqskit_circ = qiskit_to_bqskit(qiskit_circ)\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ext/qiskit/translate.py\", line 15, in qiskit_to_bqskit\n    circuit = OPENQASM2Language().decode(qasm2.dumps(qc))\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/lang/qasm2/qasm2.py\", line 37, in decode\n    visitor.visit_topdown(tree)\n  File \"/usr/local/lib/python3.10/site-packages/lark/visitors.py\", line 371, in visit_topdown\n    self._call_userfunc(subtree)\n  File \"/usr/local/lib/python3.10/site-packages/lark/visitors.py\", line 343, in _call_userfunc\n    return getattr(self, tree.data, self.__default__)(tree)\n  File \"/usr/local/lib/python3.10/site-packages/bqskit/ir/lang/qasm2/visitor.py\", line 303, in gate\n    raise LangException('Unrecognized gate: %s.' % gate_name)\nbqskit.ir.lang.language.LangException: Unrecognized gate: delay.\n",
+    "current_file": "qiskit_circuit_5q_10g_4249_6b20ab.py",
+    "involved_functions": [
+        "export_to_qasm_with_bqskit"
+    ],
+    "timestamp": 1735445387.1380467
+}

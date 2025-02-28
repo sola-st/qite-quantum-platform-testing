@@ -1,0 +1,13 @@
+{
+    "error": "Predicate requirements are not satisfied: GateSetPredicate:{ PhasedX Measure PhaseGadget ZZMax Tdg T Ry Rx Z X PauliExpBox Rz Y S Sdg V Vdg SWAP H YYPhase CY XXPhase CX ZZPhase CZ }",
+    "traceback": "Traceback (most recent call last):\n  File \"/home/paltenmo/projects/crossplatform/validate/platform_processor.py\", line 47, in run\n    return self.execute(*args, **kwargs)\n  File \"/home/paltenmo/projects/crossplatform/validate/platform_processor.py\", line 84, in execute\n    return self.transform(qc_obj, *args, **kwargs)\n  File \"/home/paltenmo/projects/crossplatform/qite/transforms/pytket_transforms.py\", line 106, in transform\n    GreedyPauliSimp().apply(tk_circuit)\nRuntimeError: Predicate requirements are not satisfied: GateSetPredicate:{ PhasedX Measure PhaseGadget ZZMax Tdg T Ry Rx Z X PauliExpBox Rz Y S Sdg V Vdg SWAP H YYPhase CY XXPhase CX ZZPhase CZ }\n",
+    "timestamp": 1738774650.1099944,
+    "crashing_operation": "pytket_optimizer_greedy_pauli_simp",
+    "input_qasm": "program_bank/v024/2025_02_05__17_57/0000012_109bc1.qasm",
+    "platform": "pytket",
+    "importer_function": "pytket_import",
+    "transformer_functions": [
+        "pytket_optimizer_greedy_pauli_simp"
+    ],
+    "exporter_function": null
+}
