@@ -82,8 +82,8 @@ RUN rustup component add llvm-tools-preview
 RUN . .venv/bin/activate && pip install lcov_cobertura
 RUN cargo install rustfilt
 
-COPY . /home/regularuser/qiskit
-RUN echo "source .venv/bin/activate" >> /home/regularuser/.bashrc
+# COPY . /home/regularuser/qiskit
+RUN echo "source /home/regularuser/qiskit/.venv/bin/activate" >> /home/regularuser/.bashrc
 RUN rm qiskit-*.profraw
 
 RUN mkdir -p /home/regularuser/app && chown -R regularuser:regularuser /home/regularuser/app
@@ -91,7 +91,7 @@ RUN mkdir -p /home/regularuser/app && chown -R regularuser:regularuser /home/reg
 RUN . .venv/bin/activate && pip install \
     qiskit-aer==0.15.1 \
     qiskit-ibm-runtime==0.29.0 \
-    pytket==1.32.0 \
+    pytket==1.33.1 \
     pytket-qiskit==0.56.0 \
     PennyLane==0.40.0 \
     PennyLane-qiskit==0.40.0 \

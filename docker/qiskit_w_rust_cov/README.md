@@ -8,7 +8,6 @@ docker build --build-arg UID=$(id -u) --build-arg GID=$(id -g) -t qiskit_w_rust 
 
 ```bash
 docker run -it --rm -v $(pwd)/container_accessible_folder:/home/regularuser/host qiskit_w_rust /bin/bash
-```
 
 cargo llvm-cov show-env --export-prefix
 # press yes

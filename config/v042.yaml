@@ -1,0 +1,66 @@
+# v042: short run for testing coverage (15 min - rust for Qiskit and Cpp for Pytket)
+
+# Changelog:
+# Support for rust coverage
+
+batch_size: 300
+budget_time_sec: 900
+
+
+commands:
+  - module: qite.generators.qasm_code_gen
+    arguments:
+      num_qubits: 11  # BQSKIT LIMITATION: max 10 qubits
+      num_gates: 15
+      # seed: 42
+      only_qregs: True
+      final_measure: False
+      num_programs: <<BATCH_SIZE>>
+      output_dir: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
+    config:
+      gate_set: [
+        'h', 'x', 'y', 'z', 'cx', 'cz', 'rx', 'ry', 'rz', 's', 't', 'tdg',
+        'sdg', 'swap', 'ccx', 'cswap', 'crz',
+        'u3', 'u2', 'u1', 'cx', 'id', 'u0', 'u', 'p', 'x', 'y', 'z', 'h',
+        's', 'sdg', 't', 'tdg', 'rx', 'ry', 'rz', 'sx', 'sxdg', 'cz', 'cy',
+        'swap', 'ch', 'ccx', 'cswap', 'crx', 'cry', 'crz', 'cu1', 'cp',
+        'cu3', 'csx', 'cu', 'rxx', 'rzz',
+        # BQSKIT LIMITATION: gates not supported
+        'rccx', 'rc3x', 'c3x', 'c3sqrtx', 'c4x'
+      ]
+
+
+  - module: qite.qite_loop
+    arguments:
+      input_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
+      number_of_rounds: 5
+      n_transform_iter: 1
+    config:
+      platforms: [
+        'qiskit', 'pytket', 'pennylane',
+        # 'bqskit'
+      ]
+      coverage: True
+      template_coverage_file: config/template_coverage/qite.cover
+      program_id_range: [0, <<BATCH_SIZE>>]
+
+  - module: qite.spot_divergences
+    arguments:
+      input_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
+      comparison_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/comparison
+      metadata_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/metadata
+    config:
+      program_id_range: [0, <<BATCH_SIZE>>]
+
+
+  # - module: qite.explore_warnings
+  #   arguments:
+  #     folder_path: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/comparison
+  #     top_k: 10
+  #     target_field: 'equivalence'
+
+  # - module: qite.explore_warnings
+  #   arguments:
+  #     folder_path: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/error
+  #     top_k: 10
+  #     target_field: 'error'

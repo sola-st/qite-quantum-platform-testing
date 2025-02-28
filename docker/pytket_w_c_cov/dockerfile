@@ -143,7 +143,7 @@ RUN . ../.venv/bin/activate && \
 # install pytket
 RUN sed -i 's/"--build=missing",/"--build=missing", "-o", '\''tket\/\*:profile_coverage=True'\'', "-s", "build_type=Debug",/' pytket/setup.py
 
-RUN . ../.venv/bin/activate && cd pytket && python -m pip install -e . -v  && pip install -r tests/requirements.txt
+RUN . ../.venv/bin/activate && cd pytket && python -m pip install . -v  && pip install -r tests/requirements.txt
 
 
 # # RUN source <(cargo llvm-cov show-env --export-prefix)
