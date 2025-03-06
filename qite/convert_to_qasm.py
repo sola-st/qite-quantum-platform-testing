@@ -5,7 +5,7 @@ from qiskit import QuantumCircuit
 from rich.console import Console
 import click
 from qite.processors.platform_processor import PlatformProcessor
-from qite.qite_loop import lazy_imports
+from qite.qite_loop import lazy_imports, prepare_coverage_file
 import yaml
 import random
 
@@ -22,33 +22,33 @@ Develop a command line interface (CLI) script that scans a given input folder fo
 **Requirements:**
 
 1. **Input Handling:**
-   - The script should accept an `--input_folder` argument specifying the folder containing Python files.
-   - The script should focus only on the first-level Python files in the input folder and ignore subfolders.
-   - The Python files should be sorted alphabetically before processing.
+    - The script should accept an `--input_folder` argument specifying the folder containing Python files.
+    - The script should focus only on the first-level Python files in the input folder and ignore subfolders.
+    - The Python files should be sorted alphabetically before processing.
 
 2. **Execution:**
-   - The script should execute the Python files using `exec` to capture the value of specific variables (e.g., `qc`).
-   - Ensure the execution environment is properly set up for running the Python code.
+    - The script should execute the Python files using `exec` to capture the value of specific variables (e.g., `qc`).
+    - Ensure the execution environment is properly set up for running the Python code.
 
 3. **Conversion:**
-   - The script should convert the captured QASM code to specified platforms (default: Qiskit, Pennylane, Pytket).
-   - Use appropriate libraries or tools for the conversion process.
-   - Ensure the converted code adheres to the standards and formats required by the target platforms.
+    - The script should convert the captured QASM code to specified platforms (default: Qiskit, Pennylane, Pytket).
+    - Use appropriate libraries or tools for the conversion process.
+    - Ensure the converted code adheres to the standards and formats required by the target platforms.
 
 4. **Output Handling:**
-   - The script should export the converted code to new QASM files in the same folder as the input files.
-   - The output QASM files should have the same name as the input files but with updated extensions to reflect the target platform.
+    - The script should export the converted code to new QASM files in the same folder as the input files.
+    - The output QASM files should have the same name as the input files but with updated extensions to reflect the target platform.
 
 5. **Error Handling and Logging:**
-   - Implement error handling to manage issues during execution and conversion.
-   - Provide logging to capture the process details, including any errors or warnings.
+    - Implement error handling to manage issues during execution and conversion.
+    - Provide logging to capture the process details, including any errors or warnings.
 
 6. **Command Line Interface:**
-   - The script should support the following command line arguments:
-     - `--input_folder`: Path to the folder containing Python files.
-     - `--platforms`: List of target platforms for conversion (default: `qiskit`, `pennylane`, `pytket`).
-   - Provide default values for optional arguments.
-   - Display progress updates and feedback to the user during execution.
+    - The script should support the following command line arguments:
+      - `--input_folder`: Path to the folder containing Python files.
+      - `--platforms`: List of target platforms for conversion (default: `qiskit`, `pennylane`, `pytket`).
+    - Provide default values for optional arguments.
+    - Display progress updates and feedback to the user during execution.
 
 
 # Style
@@ -56,7 +56,7 @@ Develop a command line interface (CLI) script that scans a given input folder fo
 - each function has at maximum 7 lines of code of content, break them to smaller functions otherwise
 - avoid function with a single line which is a function call
 - always use named arguments when calling a function
-    (except for standard library functions)
+     (except for standard library functions)
 - keep the style consistent to pep8 (max 80 char)
 - to print the logs it uses the console from Rich library
 - make sure to have docstring for each subfunction and keep it brief to the point
@@ -85,7 +85,9 @@ def convert_and_export_to_qasm(
         output_dir: str,
         circuit_input_file_name: str,
         circuit_file_name: str,
-        platform: str) -> str:
+        platform: str,
+        raise_any_exception: bool = False
+) -> str:
     """Convert a Qiskit circuit to QASM using different platforms and export it."""
     output_path = Path(output_dir)
     converter_error_path = output_path / "converter_error"
@@ -105,14 +107,16 @@ def convert_and_export_to_qasm(
         circuit_file_name=circuit_input_file_name,
         qiskit_circ=qiskit_circ,
         predefined_output_filename=circuit_file_name,
-        raise_any_exception=False
+        raise_any_exception=raise_any_exception
     )
+
     return str(exported_path)
 
 
 def process_files(
         input_folder: Path, platforms: List[str],
-        program_id_range: Optional[List[int]]) -> None:
+        program_id_range: Optional[List[int]], coverage_enabled: bool,
+        template_coverage_file: Optional[str]) -> None:
     """Process each Python file in the input folder."""
     files_to_process = [
         file_path for file_path in sorted(input_folder.glob("*.py"))
@@ -120,10 +124,20 @@ def process_files(
             program_id_range[0] <= int(file_path.stem.split('_')[0]) <= program_id_range[1]
         )
     ]
+
+    if coverage_enabled and template_coverage_file:
+        output_path = Path(input_folder)
+        cov = prepare_coverage_file(
+            template_coverage_file=template_coverage_file,
+            output_folder=output_path,
+            platforms=platforms
+        )
+        cov.start()
+
     for file_path in files_to_process:
         try:
             qc = get_qc_qiskit_from_file(file_path=str(file_path))
-            # pick random platorm
+            # pick random platform
             platform = random.choice(platforms)
             print(f"Processing {file_path} for {platform}")
             export_path = convert_and_export_to_qasm(
@@ -136,6 +150,15 @@ def process_files(
         except Exception as e:
             console.log(f"Error processing {file_path}: {e}")
 
+    if coverage_enabled and template_coverage_file:
+        output_path = Path(input_folder)
+        cov.stop()
+        cov.save()
+        cov.xml_report(
+            outfile=str(output_path / 'converter_coverage.xml'),
+            ignore_errors=True
+        )
+
 
 @click.command()
 @click.option(
@@ -147,6 +170,8 @@ def main(input_folder: str, config: Optional[str]) -> None:
     """Main function to handle CLI arguments and initiate processing."""
     input_folder_path = Path(input_folder)
     program_id_range = None
+    coverage_enabled = False
+    template_coverage_file = None
 
     if config:
         with open(config, 'r') as f:
@@ -155,10 +180,14 @@ def main(input_folder: str, config: Optional[str]) -> None:
         platform_list = config_data.get('platforms')
         program_id_range = config_data.get(
             'program_id_range', program_id_range)
+        coverage_enabled = config_data.get('coverage', coverage_enabled)
+        template_coverage_file = config_data.get(
+            'template_coverage_file', template_coverage_file)
 
     process_files(
         input_folder=input_folder_path, platforms=platform_list,
-        program_id_range=program_id_range)
+        program_id_range=program_id_range, coverage_enabled=coverage_enabled,
+        template_coverage_file=template_coverage_file)
 
 
 if __name__ == "__main__":

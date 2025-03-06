@@ -132,8 +132,11 @@ def fill_and_load_config(config_file: Path) -> Dict[str, Any]:
 
     try:
         config_dict = yaml.safe_load(raw_config)
+        batch_size = int(config_dict['batch_size'])
         raw_config = raw_config.replace(
-            '<<BATCH_SIZE>>', str(config_dict['batch_size']))
+            '<<BATCH_SIZE>>', str(batch_size))
+        raw_config = raw_config.replace(
+            '<<HALF_BATCH_SIZE>>', str(batch_size // 2))
     except KeyError:
         raise Exception(
             "Placeholder '<<BATCH_SIZE>>' found but 'batch_size' is not defined in the config file.")
@@ -285,6 +288,19 @@ def main(config: str, screen: bool, continuous_fuzzing: bool) -> None:
     finally:
         if budget_time_sec:
             signal.alarm(0)
+
+    # print the name of the folder where the programs are stored as
+    # the last line of the log
+    print(f"Programs stored in folder:")
+    output_folder = None
+    for command in config_data['commands']:
+        if command['module'] == 'qite.qite_loop':
+            output_folder = command['arguments']['input_folder']
+            break
+    if not output_folder:
+        output_folder = config_data['commands'][
+            -1]['arguments']['input_folder']
+    print(output_folder)
 
 
 if __name__ == '__main__':
