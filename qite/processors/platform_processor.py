@@ -73,8 +73,8 @@ class PlatformProcessor:
 
     def set_exception_handling(self, raise_any_exception: bool):
         """Iterates over all operations and sets the raise_any_exception attribute."""
-        operations = {
-            self._importer, *self.transformers, self._exporter}
+        operations = {self._importer, *self.transformers,
+                      self._exporter, self._converter}
         for operation in operations:
             operation.set_exception_handling(raise_any_exception)
         logger.info(f"Exception handling set to: {raise_any_exception}")
