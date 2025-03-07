@@ -2,40 +2,39 @@
 
 # Script Name: collect_pytket_cov.sh
 # Purpose: Collect and generate coverage report for pytket.
-# Usage: ./collect_pytket_cov.sh <config-folder-name>
+# Usage: ./collect_pytket_cov.sh <config-folder-name> <filepath-with-folder-path>
 # Dependencies: gcovr
 
 
 # Function to print usage instructions
 usage() {
-    echo "Usage: $0 <config-folder-name>"
+    echo "Usage: $0 <config-folder-name> <filepath-with-folder-path>"
     exit 1
 }
 
 
-# Function to copy the coverage report to the latest subfolder
+# Function to copy the coverage report to the specified folder
 copy_coverage_report() {
-    local config_folder_name="$1"
-    echo "Copying coverage report to the latest subfolder..."
-    local latest_subfolder
-    latest_subfolder=$(ls -d /home/regularuser/databank/program_bank/"${config_folder_name}"/*/ | sort | tail -n 1)
-    if [[ -z "$latest_subfolder" ]]; then
-        echo "Error: No subfolders found in /home/regularuser/databank/program_bank/${config_folder_name}/"
-        exit 1
-    fi
-    cp /home/regularuser/tket/cpp_coverage.xml "$latest_subfolder"
-    echo "Coverage report copied to $latest_subfolder"
+    local folder="$1"
+    echo "Copying coverage report to the specified folder..."
+    cp /home/regularuser/tket/cpp_coverage.xml "$folder"
+    echo "Coverage report copied to $folder"
 }
 
 # Main script execution
 main() {
-    # Get the config folder name from the first argument
+    # Get the config folder name and the file path from the arguments
     local config_folder_name="${1:-}"
+    local filepath_with_folder_path="${2:-}"
 
-    # Check if the config folder name is provided
-    if [[ -z "$config_folder_name" ]]; then
+    # Check if the config folder name and file path are provided
+    if [[ -z "$config_folder_name" || -z "$filepath_with_folder_path" ]]; then
         usage
     fi
+
+    # Read the folder path from the file
+    local folder
+    folder=$(cat "$filepath_with_folder_path")
 
     echo "Starting coverage collection for config folder: $config_folder_name"
 
@@ -54,8 +53,8 @@ main() {
           -o /home/regularuser/tket/cpp_coverage.xml --decisions
     echo "Coverage report created at /home/regularuser/tket/cpp_coverage.xml"
 
-    # Copy the cpp_coverage.xml to the host
-    copy_coverage_report "$config_folder_name"
+    # Copy the cpp_coverage.xml to the specified folder
+    copy_coverage_report "$folder"
 
     echo "Coverage collection completed successfully."
 }

@@ -147,18 +147,21 @@ RUN . /home/regularuser/.venv/bin/activate && \
 # prepare folder for QITE app
 RUN mkdir -p /home/regularuser/app && \
     mkdir -p /home/regularuser/databank && \
+    mkdir -p /home/regularuser/databank/tests/e2e/config && \
     chown -R regularuser:regularuser /home/regularuser/app && \
     chown -R regularuser:regularuser /home/regularuser/tket && \
     chown -R regularuser:regularuser /home/regularuser/qiskit && \
-    chown -R regularuser:regularuser /home/regularuser/databank
+    chown -R regularuser:regularuser /home/regularuser/databank && \
+    chown -R regularuser:regularuser /home/regularuser/databank/tests/e2e/config
 
 
 # make sure that each command is run in the virtual environment
 RUN echo "source /home/regularuser/.venv/bin/activate" >> /home/regularuser/.bashrc
 
 USER root
-RUN apt-get update && apt-get install -y gcovr llvm-16
+RUN apt-get update && apt-get install -y gcovr llvm-16 screen
 RUN echo 'root:Docker!' | chpasswd
+# RUN ln -fs /usr/share/zoneinfo/CET /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
 USER regularuser
 
 CMD ["/bin/bash"]

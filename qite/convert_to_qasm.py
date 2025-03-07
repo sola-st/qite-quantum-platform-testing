@@ -8,6 +8,7 @@ from qite.processors.platform_processor import PlatformProcessor
 from qite.qite_loop import lazy_imports, prepare_coverage_file
 import yaml
 import random
+import time
 
 """
 Here is a revised task description based on your additional requirements:
@@ -116,7 +117,9 @@ def convert_and_export_to_qasm(
 def process_files(
         input_folder: Path, platforms: List[str],
         program_id_range: Optional[List[int]], coverage_enabled: bool,
-        template_coverage_file: Optional[str]) -> None:
+        template_coverage_file: Optional[str],
+        end_timestamp: int = -1
+) -> None:
     """Process each Python file in the input folder."""
     files_to_process = [
         file_path for file_path in sorted(input_folder.glob("*.py"))
@@ -136,6 +139,9 @@ def process_files(
 
     for file_path in files_to_process:
         try:
+            if end_timestamp != -1 and time.time() > end_timestamp:
+                console.print("Time limit exceeded. Exiting.")
+                break
             qc = get_qc_qiskit_from_file(file_path=str(file_path))
             # pick random platform
             platform = random.choice(platforms)
@@ -166,8 +172,14 @@ def process_files(
     help='Path to the folder containing Python files.')
 @click.option('--config', type=click.Path(exists=True), default=None,
               help='Path to the config file (YAML).')
-def main(input_folder: str, config: Optional[str]) -> None:
+@click.option('--end_timestamp', type=int, default=-1,
+              help='Exit if current time exceeds this timestamp.')
+def main(input_folder: str, config: Optional[str], end_timestamp: int) -> None:
     """Main function to handle CLI arguments and initiate processing."""
+    if end_timestamp != -1 and time.time() > end_timestamp:
+        console.print("Time limit exceeded. Exiting.")
+        exit(0)
+
     input_folder_path = Path(input_folder)
     program_id_range = None
     coverage_enabled = False
@@ -187,7 +199,8 @@ def main(input_folder: str, config: Optional[str]) -> None:
     process_files(
         input_folder=input_folder_path, platforms=platform_list,
         program_id_range=program_id_range, coverage_enabled=coverage_enabled,
-        template_coverage_file=template_coverage_file)
+        template_coverage_file=template_coverage_file,
+        end_timestamp=end_timestamp)
 
 
 if __name__ == "__main__":

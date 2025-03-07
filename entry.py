@@ -86,7 +86,9 @@ Convert the function above into a click v8 interface in Python.
 
 """
 
+from typing import TextIO
 import os
+import sys
 import yaml
 import subprocess
 import datetime
@@ -96,8 +98,52 @@ import click
 from rich.console import Console
 from tempfile import NamedTemporaryFile
 import signal
+from uuid import uuid4
 
-console = Console()
+
+# Add at top of file after imports
+current_process = None
+console = None
+
+
+class TeePrinter:
+    """Print to multiple outputs."""
+
+    def __init__(self, *files: TextIO):
+        self.files = files
+
+    def write(self, data: str) -> None:
+        """Write to all files."""
+        for f in self.files:
+            f.write(data)
+            f.flush()
+
+    def flush(self) -> None:
+        """Flush all files."""
+        for f in self.files:
+            f.flush()
+
+
+def create_dual_console(log_file: Path) -> Console:
+    """Create a console that prints to both file and stdout."""
+    log_handle = log_file.open('a')
+    tee = TeePrinter(sys.stdout, log_handle)
+    return Console(
+        file=tee,
+        color_system=None,
+        force_terminal=True
+    )
+
+
+def cleanup_process():
+    """Cleanup running process if it exists."""
+    global current_process
+    if current_process:
+        try:
+            current_process.terminate()
+            # os.killpg(os.getpgid(current_process.pid), signal.SIGTERM)
+        except Exception:
+            pass
 
 
 def fill_and_load_config(config_file: Path) -> Dict[str, Any]:
@@ -125,8 +171,11 @@ def fill_and_load_config(config_file: Path) -> Dict[str, Any]:
     # continuous mode)
 
     raw_config = config_file.read_text()
+    unique_id = str(uuid4())[:6]
     raw_config = raw_config.replace(
         '<<RUN_FOLDER>>', datetime.datetime.now().strftime('%Y_%m_%d__%H_%M'))
+    # '<<RUN_FOLDER>>', datetime.datetime.now().strftime('%Y_%m_%d__%H_%M') +
+    # unique_id)
     raw_config = raw_config.replace(
         '<<THIS_FILE_NAME>>', config_file.stem)
 
@@ -156,14 +205,17 @@ def dump_config_to_log(config: Dict[str, Any], log_file: Path) -> None:
     """Dump the YAML configuration into the log file."""
     with log_file.open('w') as f:
         yaml.dump(config, f)
-    console.print(f"[bold green]Config dumped to {log_file}[/bold green]")
+    global console
+    console = create_dual_console(log_file)
+    console.print(f"== Config dumped to {log_file} ==")
 
 
-def build_command(command_config: Dict[str, Any]) -> str:
+def build_command(command_config: Dict[str, Any], end_timestamp: int) -> str:
     """Build the Python command from the configuration."""
     module = command_config['module']
     arguments = command_config['arguments']
     config = command_config.get('config', None)
+    arguments['end_timestamp'] = end_timestamp
 
     # Convert the arguments to command line options
     cmd_parts = [f"python -m {module}"]
@@ -189,24 +241,32 @@ def build_command(command_config: Dict[str, Any]) -> str:
     return " ".join(cmd_parts)
 
 
-def run_command(command: str, use_screen: bool, log_file: Path) -> None:
-    """Run the command, optionally inside a screen."""
-    if use_screen:
-        screen_cmd = (
-            f"screen -L -Logfile {log_file} -m {command}"
+def run_command(command: str) -> None:
+    """Run the command with proper output handling."""
+    global current_process
+    global console
+
+    try:
+        current_process = subprocess.Popen(
+            command,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            preexec_fn=os.setsid,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
         )
-        console.print(
-            f"[bold blue]Command running in screen session.[/bold blue]")
-        result = subprocess.run(screen_cmd, shell=True, check=True)
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"Command failed with return code {result.returncode}")
-    else:
-        result = subprocess.run(command, shell=True, check=True)
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"Command failed with return code {result.returncode}")
-        console.print(f"[bold blue]Command executed.[/bold blue]")
+
+        for line in current_process.stdout:
+            console.print(line, end='')
+
+        current_process.wait()
+        if current_process.returncode != 0:
+            raise subprocess.CalledProcessError(
+                current_process.returncode, command)
+    finally:
+        cleanup_process()
 
 
 def replace_program_range(config, program_range: List[int]) -> Dict[str, Any]:
@@ -224,12 +284,11 @@ def replace_program_range(config, program_range: List[int]) -> Dict[str, Any]:
 @click.command()
 @click.option('--config', type=click.Path(exists=True),
               required=True, help="Path to the YAML config file.")
-@click.option('--screen', is_flag=True,
-              help="Run command in a screen session.")
 @click.option('--continuous_fuzzing', is_flag=True, default=False,
               help="Enable continuous fuzzing mode.")
-def main(config: str, screen: bool, continuous_fuzzing: bool) -> None:
+def main(config: str, continuous_fuzzing: bool) -> None:
     """Main function to execute the command based on the YAML config."""
+    global console
     config_file = Path(config)
     config_data = fill_and_load_config(config_file)
 
@@ -238,21 +297,38 @@ def main(config: str, screen: bool, continuous_fuzzing: bool) -> None:
     dump_config_to_log(config=config_data, log_file=log_file)
 
     if continuous_fuzzing:
-        console.print("[bold red]Continuous fuzzing mode enabled.[/bold red]")
+        console.print("+++ Continuous fuzzing mode enabled. +++")
 
     batch_size = config_data.get('batch_size')
     budget_time_sec = config_data.get('budget_time_sec', None)
     if budget_time_sec:
         console.print(
-            f"[bold red]Budget time set to {budget_time_sec} seconds.[/bold red]")
+            f"*** Budget time set to {budget_time_sec} seconds. ***")
 
     def timeout_handler(signum, frame):
-        console.print("[bold red]Timeout expired. Exiting...[/bold red]")
+        """Handle timeout by cleaning up processes."""
+        console.print("!!! Timeout expired. Cleaning up... !!!")
+        cleanup_process()
         raise TimeoutError
 
+    def signal_handler(signum, frame):
+        """Handle interrupt signals."""
+        console.print(
+            "\n--- Received interrupt signal. Cleaning up... ---")
+        cleanup_process()
+        raise KeyboardInterrupt
+
+    end_timestamp = -1
     if budget_time_sec:
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(budget_time_sec)
+        # signal.alarm(budget_time_sec)
+        print(f"Setting alarm to {budget_time_sec}")
+        c_time = int(datetime.datetime.now().timestamp())
+        print(f"Current time: {c_time}")
+        end_timestamp = int(c_time + budget_time_sec)
+        print(f"End time: {end_timestamp}")
 
     try:
         batch_number = 0
@@ -268,17 +344,22 @@ def main(config: str, screen: bool, continuous_fuzzing: bool) -> None:
                 for idx, command_config in enumerate(
                         config_data['commands'],
                         start=1):
-                    command = build_command(command_config=command_config)
+                    command = build_command(
+                        command_config=command_config,
+                        end_timestamp=end_timestamp
+                    )
                     console.print(
-                        f"[bold yellow]Command {idx})\n{command}[/bold yellow]")
-                    run_command(command=command, use_screen=screen,
-                                log_file=log_file)
+                        f"== Command {idx})\n{command}==")
+                    run_command(command=command)
             else:
                 command = build_command(command_config=config_data['command'])
                 console.print(
-                    f"[bold yellow]Command to run:\n{command}[/bold yellow]")
-                run_command(command=command, use_screen=screen,
-                            log_file=log_file)
+                    f"== Command to run:\n{command}==")
+                run_command(command=command, end_timestamp=end_timestamp)
+
+            if end_timestamp != -1 and int(datetime.datetime.now().timestamp()) > end_timestamp:
+                console.print("Time limit exceeded. Exiting.")
+                break
 
             if not continuous_fuzzing:
                 break

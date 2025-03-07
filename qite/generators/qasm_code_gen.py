@@ -13,237 +13,9 @@ from typing import Callable
 import json
 import time
 
+from qite.generators.qasm_gates import GATE_MAP, Gate
+
 # qasm_code_gen.py
-
-
-@dataclass
-class Gate:
-    name: str
-    num_qubits: int
-    num_params: int = 0
-    sanitize_params: Callable = lambda x: x
-
-    def to_qasm(self, qreg_name: str, circuit_size: int) -> str:
-        qubits = random.sample(range(circuit_size), self.num_qubits)
-        qubit_str = ",".join(f"{qreg_name}[{q}]" for q in qubits)
-        if self.num_params > 0:
-            params = [
-                self.sanitize_params(random.uniform(0, 2 * math.pi))
-                for _ in range(self.num_params)]
-            param_str = ",".join(map(str, params))
-            return f"{self.name}({param_str}) {qubit_str};"
-        else:
-            return f"{self.name} {qubit_str};"
-
-
-class U3(Gate):
-    def __init__(self):
-        super().__init__("u3", 1, 3)
-
-
-class U2(Gate):
-    def __init__(self):
-        super().__init__("u2", 1, 2)
-
-
-class U1(Gate):
-    def __init__(self):
-        super().__init__("u1", 1, 1)
-
-
-class CX(Gate):
-    def __init__(self):
-        super().__init__("cx", 2)
-
-
-class ID(Gate):
-    def __init__(self):
-        super().__init__("id", 1)
-
-
-class U0(Gate):
-    def __init__(self):
-        super().__init__("u0", 1, 1, lambda x: math.ceil(x))
-
-
-class U(Gate):
-    def __init__(self):
-        super().__init__("u", 1, 3)
-
-
-class P(Gate):
-    def __init__(self):
-        super().__init__("p", 1, 1)
-
-
-class X(Gate):
-    def __init__(self):
-        super().__init__("x", 1)
-
-
-class Y(Gate):
-    def __init__(self):
-        super().__init__("y", 1)
-
-
-class Z(Gate):
-    def __init__(self):
-        super().__init__("z", 1)
-
-
-class H(Gate):
-    def __init__(self):
-        super().__init__("h", 1)
-
-
-class S(Gate):
-    def __init__(self):
-        super().__init__("s", 1)
-
-
-class SDG(Gate):
-    def __init__(self):
-        super().__init__("sdg", 1)
-
-
-class T(Gate):
-    def __init__(self):
-        super().__init__("t", 1)
-
-
-class TDG(Gate):
-    def __init__(self):
-        super().__init__("tdg", 1)
-
-
-class RX(Gate):
-    def __init__(self):
-        super().__init__("rx", 1, 1)
-
-
-class RY(Gate):
-    def __init__(self):
-        super().__init__("ry", 1, 1)
-
-
-class RZ(Gate):
-    def __init__(self):
-        super().__init__("rz", 1, 1)
-
-
-class SX(Gate):
-    def __init__(self):
-        super().__init__("sx", 1)
-
-
-class SXDG(Gate):
-    def __init__(self):
-        super().__init__("sxdg", 1)
-
-
-class CZ(Gate):
-    def __init__(self):
-        super().__init__("cz", 2)
-
-
-class CY(Gate):
-    def __init__(self):
-        super().__init__("cy", 2)
-
-
-class SWAP(Gate):
-    def __init__(self):
-        super().__init__("swap", 2)
-
-
-class CH(Gate):
-    def __init__(self):
-        super().__init__("ch", 2)
-
-
-class CCX(Gate):
-    def __init__(self):
-        super().__init__("ccx", 3)
-
-
-class CSWAP(Gate):
-    def __init__(self):
-        super().__init__("cswap", 3)
-
-
-class CRX(Gate):
-    def __init__(self):
-        super().__init__("crx", 2, 1)
-
-
-class CRY(Gate):
-    def __init__(self):
-        super().__init__("cry", 2, 1)
-
-
-class CRZ(Gate):
-    def __init__(self):
-        super().__init__("crz", 2, 1)
-
-
-class CU1(Gate):
-    def __init__(self):
-        super().__init__("cu1", 2, 1)
-
-
-class CP(Gate):
-    def __init__(self):
-        super().__init__("cp", 2, 1)
-
-
-class CU3(Gate):
-    def __init__(self):
-        super().__init__("cu3", 2, 3)
-
-
-class CSX(Gate):
-    def __init__(self):
-        super().__init__("csx", 2)
-
-
-class CU(Gate):
-    def __init__(self):
-        super().__init__("cu", 2, 4)
-
-
-class RXX(Gate):
-    def __init__(self):
-        super().__init__("rxx", 2, 1)
-
-
-class RZZ(Gate):
-    def __init__(self):
-        super().__init__("rzz", 2, 1)
-
-
-class RCCX(Gate):
-    def __init__(self):
-        super().__init__("rccx", 3)
-
-
-class RC3X(Gate):
-    def __init__(self):
-        super().__init__("rc3x", 4)
-
-
-class C3X(Gate):
-    def __init__(self):
-        super().__init__("c3x", 4)
-
-
-class C3SQRTX(Gate):
-    def __init__(self):
-        super().__init__("c3sqrtx", 4)
-
-
-class C4X(Gate):
-    def __init__(self):
-        super().__init__("c4x", 5)
 
 
 class QASMCodeGenerator:
@@ -253,49 +25,7 @@ class QASMCodeGenerator:
         self.num_qubits = num_qubits
         self.qasm_code = []
         self.only_qregs = only_qregs
-        self.available_gates = {
-            "u3": U3(),
-            "u2": U2(),
-            "u1": U1(),
-            "cx": CX(),
-            "id": ID(),
-            "u0": U0(),
-            "u": U(),
-            "p": P(),
-            "x": X(),
-            "y": Y(),
-            "z": Z(),
-            "h": H(),
-            "s": S(),
-            "sdg": SDG(),
-            "t": T(),
-            "tdg": TDG(),
-            "rx": RX(),
-            "ry": RY(),
-            "rz": RZ(),
-            "sx": SX(),
-            "sxdg": SXDG(),
-            "cz": CZ(),
-            "cy": CY(),
-            "swap": SWAP(),
-            "ch": CH(),
-            "ccx": CCX(),
-            "cswap": CSWAP(),
-            "crx": CRX(),
-            "cry": CRY(),
-            "crz": CRZ(),
-            "cu1": CU1(),
-            "cp": CP(),
-            "cu3": CU3(),
-            "csx": CSX(),
-            "cu": CU(),
-            "rxx": RXX(),
-            "rzz": RZZ(),
-            "rccx": RCCX(),
-            "rc3x": RC3X(),
-            "c3x": C3X(),
-            "c3sqrtx": C3SQRTX(),
-            "c4x": C4X()}
+        self.available_gates = GATE_MAP
         self.gates = (
             [self.available_gates[gate] for gate in gate_set]
             if gate_set else list(self.available_gates.values())
@@ -375,17 +105,20 @@ The goal is to be able to import that function also from other files.
 console = Console()
 
 
-def get_latest_qasm_index(output_dir: Path) -> int:
-    qasm_files = list(output_dir.glob("*.qasm"))
-    if not qasm_files:
-        return 0
-    return max(int(f.stem.split("_")[0]) for f in qasm_files)
+def get_latest_index(output_dir: Path, extensions: List[str]) -> int:
+    latest_index = 0
+    for ext in extensions:
+        files = list(output_dir.glob(f"*.{ext}"))
+        if files:
+            indices = [int(f.stem.split("_")[0]) for f in files]
+            latest_index = max(latest_index, max(indices))
+    return latest_index
 
 
 def generate_qasm_programs(
         num_qubits: int, num_gates: int, seed: int, final_measure: bool,
         num_programs: int, output_dir: str, only_qregs: bool,
-        gate_set: Optional[List[str]] = None):
+        gate_set: Optional[List[str]] = None, end_timestamp: int = -1):
     """Generate a given number of random QASM programs.
 
     Each program is stored as .qasm and has the name
@@ -410,10 +143,14 @@ def generate_qasm_programs(
         num_qubits=num_qubits, seed=seed, gate_set=gate_set,
         only_qregs=only_qregs)
 
-    starting_index = get_latest_qasm_index(
-        generation_output_path) + 1
+    starting_index = get_latest_index(
+        generation_output_path, extensions=["py", "qasm"]) + 1
 
     for i in range(starting_index, num_programs + starting_index):
+        if end_timestamp != -1 and time.time() > end_timestamp:
+            console.print("Time limit exceeded. Exiting.")
+            exit(0)
+
         start_time = time.time()
         generator.generate_random_qasm(
             num_gates=num_gates, final_measure=final_measure)
@@ -453,10 +190,17 @@ def generate_qasm_programs(
               help='Path to the config file (YAML).')
 @click.option('--only_qregs', is_flag=True, default=False,
               help='Generate only quantum registers without classical registers.')
+@click.option('--end_timestamp', type=int, default=-1,
+              help='Exit with code 1 if current timestamp exceeds this value.')
 def main(
         num_qubits: int, num_gates: int, seed: int, final_measure: bool,
         num_programs: int, output_dir: str, config: Optional[str],
-        only_qregs: bool):
+        only_qregs: bool, end_timestamp: int):
+
+    if end_timestamp != -1 and time.time() > end_timestamp:
+        console.print(
+            "[red]Current time exceeds end timestamp, exiting.[/red]")
+        exit(0)
 
     gate_set = None
 
@@ -475,7 +219,8 @@ def main(
     generate_qasm_programs(
         num_qubits=num_qubits, num_gates=num_gates, seed=seed,
         final_measure=final_measure, num_programs=num_programs,
-        output_dir=output_dir, only_qregs=only_qregs, gate_set=gate_set)
+        output_dir=output_dir, only_qregs=only_qregs, gate_set=gate_set,
+        end_timestamp=end_timestamp)
 
 
 if __name__ == "__main__":

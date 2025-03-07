@@ -140,7 +140,8 @@ def run_verification(path_qasm_a: str, path_qasm_b: str,
 
 def process_files(input_folder: str, comparison_folder: str,
                   metadata_folder: str,
-                  program_id_range: Optional[List[int]] = None):
+                  program_id_range: Optional[List[int]] = None,
+                  end_timestamp: int = -1):
     input_path = Path(input_folder)
     comparison_path = Path(comparison_folder)
     metadata_path = Path(metadata_folder)
@@ -171,6 +172,10 @@ def process_files(input_folder: str, comparison_folder: str,
         groups[prefix].append(str(file))
 
     for prefix, group in sorted(groups.items()):
+        if end_timestamp != -1 and time.time() > end_timestamp:
+            logging.info("End timestamp reached, exiting")
+            exit(0)
+
         logging.info(f"Processing group with prefix {prefix}")
         group.sort(key=lambda x: int(Path(x).stem[:7]))
         comparator = MostDifferentQASMsComparatorPicker()
@@ -234,10 +239,12 @@ def process_files(input_folder: str, comparison_folder: str,
               help='Path to the config file (YAML).')
 @click.option('--program_id_range', type=(int, int), default=None,
               help='Range of program IDs to process (start, end).')
+@click.option('--end_timestamp', type=int, default=-1,
+              help='Exit if current time exceeds this timestamp.')
 def main(
         input_folder: str, comparison_folder: str, metadata_folder: str,
-        config: Optional[str],
-        program_id_range: Optional[Tuple[int, int]]):
+        config: Optional[str], program_id_range: Optional[Tuple[int, int]],
+        end_timestamp: int):
     if config:
         with open(config, 'r') as f:
             config_data = yaml.safe_load(f)
@@ -247,10 +254,16 @@ def main(
         metadata_folder = config_data.get('metadata_folder', metadata_folder)
         program_id_range = config_data.get(
             'program_id_range', program_id_range)
+        end_timestamp = config_data.get('end_timestamp', end_timestamp)
+
+    if end_timestamp != -1 and time.time() > end_timestamp:
+        logging.info("End timestamp reached, exiting")
+        exit(0)
 
     logging.info("Starting the process")
     process_files(input_folder, comparison_folder,
-                  metadata_folder, program_id_range)
+                  metadata_folder, program_id_range,
+                  end_timestamp=end_timestamp)
     logging.info("Process completed")
 
 
