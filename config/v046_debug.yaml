@@ -4,7 +4,7 @@
 # 1. remove the multiprocessing usage
 
 batch_size: 300
-budget_time_sec: 300 #3600
+budget_time_sec: 100 #3600
 
 
 commands:

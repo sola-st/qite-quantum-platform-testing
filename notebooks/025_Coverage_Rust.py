@@ -112,10 +112,21 @@ EXPERIMENTS_QITE = {
         "path": "../program_bank/v046_debug/2025_03_07__16_29",
         "description": "1h - 3 platforms  - threads "
     },
+    "2025_03_07__16_32": {
+        "path": "../program_bank/v045/2025_03_07__16_32",
+        "description": "1h - 3 platforms  - threads "
+    },
+    # program_bank/v045/2025_03_07__16_41
+    "2025_03_07__16_41": {
+        "path": "../program_bank/v045/2025_03_07__16_41",
+        "description": "1h - 3 platforms  - threads "
+    },
 }
 
-SELECTED_EXP_QITE = "2025_03_07__16_29"
+SELECTED_EXP_QITE = "2025_03_07__16_41"
 SELECTED_EXP_QITE_MULTIPLE = [
+    "2025_03_07__16_29",
+    "2025_03_07__16_32",
     SELECTED_EXP_QITE,
 ]
 

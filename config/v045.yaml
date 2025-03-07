@@ -4,7 +4,7 @@
 # Support for rust coverage
 
 batch_size: 500
-budget_time_sec: 30 #28800  # 8 hours
+budget_time_sec: 3600 #28800  # 8 hours
 
 
 commands:

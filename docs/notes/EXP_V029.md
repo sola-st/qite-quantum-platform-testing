@@ -22,6 +22,27 @@ ls -l program_bank/v042/<RUN FOLDER>/*.xml
 ```
 
 
+4. To run all the coverage you can use the following command
+
+```shell
+screen bash docker/coverage_toolkit/run_qite_in_docker.sh -c config/v045.yaml --interactive
+## interactive allows to use CTRL + C to stop the process
+## screen is for running in the background
+## it should also produce a log in the logs folder
+```
+
+5. To compute the coverage files manually you can use the following commands
+
+```shell
+python -m qite.compute_coverage --folder_path program_bank/v046_debug/2025_03_07__16_29
+```
+This is usually done automatically when running the `run_qite_in_docker.sh` script.
+
+Note: This command is useful to get the coverage data from the MorphQ run in a analogous and comparable way.
+```shell
+python -m qite.compute_coverage --folder_path path/to/MorphQ-Quantum-Qiskit-Testing-ICSE-23/data/qmt_v14
+```
+
 # Problems
 
 llvm-profdata uses a difernt llvm thatn what used by rust
