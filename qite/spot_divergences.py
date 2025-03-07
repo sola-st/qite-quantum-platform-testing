@@ -173,7 +173,7 @@ def process_files(input_folder: str, comparison_folder: str,
 
     for prefix, group in sorted(groups.items()):
         if end_timestamp != -1 and time.time() > end_timestamp:
-            logging.info("End timestamp reached, exiting")
+            logging.info("Time limit exceeded. Exiting.")
             exit(0)
 
         logging.info(f"Processing group with prefix {prefix}")
@@ -257,7 +257,7 @@ def main(
         end_timestamp = config_data.get('end_timestamp', end_timestamp)
 
     if end_timestamp != -1 and time.time() > end_timestamp:
-        logging.info("End timestamp reached, exiting")
+        logging.info("Time limit exceeded. Exiting.")
         exit(0)
 
     logging.info("Starting the process")

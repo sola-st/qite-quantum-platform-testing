@@ -51,33 +51,73 @@ EXPERIMENTS_QITE = {
         "path": "../program_bank/v045/2025_03_05__02_33",
         "description": "QITE: 8h - 2 generators"
     },
-    "2025_03_05__17_47": {
-        "path": "../program_bank/v046/2025_03_05__17_47",
-        "description": "Option A: 1h - 3 platforms"
+    # "2025_03_05__17_47": {
+    #     "path": "../program_bank/v046/2025_03_05__17_47",
+    #     "description": "Option A: 1h - 3 platforms"
+    # },
+    # "2025_03_05__21_56": {
+    #     "path": "../program_bank/v046/2025_03_05__21_56",
+    #     "description": "1h - 3 platforms"
+    # },
+    # "2025_03_06__00_18": {
+    #     "path": "../program_bank/v046/2025_03_06__00_18",
+    #     "description": "1h - 3 platforms"
+    # },
+    # "2025_03_05__23_24": {
+    #     "path": "../program_bank/v046/2025_03_05__23_24",
+    #     "description": "1h - 3 platforms"
+    # },
+    # "2025_03_06__10_47": {
+    #     "path": "../program_bank/v046/2025_03_06__10_47",
+    #     "description": "1h - 3 platforms"
+    # },
+    # "2025_03_06__12_58": {
+    #     "path": "../program_bank/v046/2025_03_06__12_58",
+    #     "description": "1h - 3 platforms"
+    # },
+    # "2025_03_06__23_35": {
+    #     "path": "../program_bank/v046/2025_03_06__23_35",
+    #     "description": "1h - 3 platforms - new timeout"
+    # },
+    # "2025_03_07__01_30": {
+    #     "path": "../program_bank/v046/2025_03_07__01_30",
+    #     "description": "1h - 3 platforms  - new timeout"
+    # },
+    # "2025_03_07__01_31": {
+    #     "path": "../program_bank/v046/2025_03_07__01_31",
+    #     "description": "1h - 3 platforms  - new timeout"
+    # },
+    # "2025_03_07__01_32": {
+    #     "path": "../program_bank/v046/2025_03_07__01_32",
+    #     "description": "1h - 3 platforms  - new timeout"
+    # },
+    # "2025_03_07__01_33": {
+    #     "path": "../program_bank/v046/2025_03_07__01_31",
+    #     "description": "8h - 3 platforms  - new timeout"
+    # },
+    # "2025_03_07__01_35": {
+    #     "path": "../program_bank/v046/2025_03_07__01_31",
+    #     "description": "8h - 3 platforms  - new timeout"
+    # },
+    "2025_03_07__15_21": {
+        "path": "../program_bank/v046_debug/2025_03_07__15_21",
+        "description": "1h - 3 platforms  - new timeout"
     },
-    "2025_03_05__21_56": {
-        "path": "../program_bank/v046/2025_03_05__21_56",
-        "description": "1h - 3 platforms"
+    "2025_03_07__16_14": {
+        "path": "../program_bank/v046_debug/2025_03_07__16_14",
+        "description": "1h - 3 platforms  - new timeout"
     },
-    "2025_03_06__00_18": {
-        "path": "../program_bank/v046/2025_03_06__00_18",
-        "description": "1h - 3 platforms"
-    },
-    "2025_03_05__23_24": {
-        "path": "../program_bank/v046/2025_03_05__23_24",
-        "description": "1h - 3 platforms"
-    },
-    "2025_03_06__10_47": {
-        "path": "../program_bank/v046/2025_03_06__10_47",
-        "description": "1h - 3 platforms"
-    },
-    "2025_03_06__12_58": {
-        "path": "../program_bank/v046/2025_03_06__12_58",
-        "description": "1h - 3 platforms"
+    # program_bank/v046_debug/2025_03_07__16_29
+    "2025_03_07__16_29": {
+        "path": "../program_bank/v046_debug/2025_03_07__16_29",
+        "description": "1h - 3 platforms  - threads "
     },
 }
 
-SELECTED_EXP_QITE = "2025_03_06__12_58"
+SELECTED_EXP_QITE = "2025_03_07__16_29"
+SELECTED_EXP_QITE_MULTIPLE = [
+    SELECTED_EXP_QITE,
+]
 
 EXPERIMENTS_MORPHQ = {
     "v14": {
@@ -909,21 +949,22 @@ def print_latex_commands(
         print(f"\\newcommand{{\\{cmd_name}}}{{{value}}}")
 
 
-exp_ours = package_coverage_ours[SELECTED_EXP_QITE]["qiskit"]
 exp_morphq = package_coverage_morphq[SELECTED_EXP_MORPHQ]["qiskit"]
 
+for exp_name in SELECTED_EXP_QITE_MULTIPLE:
+    print(f"\nCreating Venn diagram for {exp_name}")
+    exp_ours = package_coverage_ours[exp_name]["qiskit"]
+    # Example usage remains the same but with named arguments
+    fig, ax, venn_data = create_coverage_venn_diagram(
+        qite_lines=set(exp_ours["covered_lines"]),
+        morphq_lines=set(exp_morphq["covered_lines"]),
+    )
 
-# Example usage remains the same but with named arguments
-fig, ax, venn_data = create_coverage_venn_diagram(
-    qite_lines=set(exp_ours["covered_lines"]),
-    morphq_lines=set(exp_morphq["covered_lines"]),
-)
-
-print_latex_commands(
-    cov_qiskit_ours=exp_ours,
-    cov_qiskit_morphq=exp_morphq,
-    venn_data=venn_data,
-)
+    print_latex_commands(
+        cov_qiskit_ours=exp_ours,
+        cov_qiskit_morphq=exp_morphq,
+        venn_data=venn_data,
+    )
 
 
 # In[18]:

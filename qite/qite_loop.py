@@ -11,7 +11,8 @@ from qite.base.primitives import Transformer
 
 import signal
 import coverage
-import multiprocessing
+# import multiprocessing
+import threading
 import time
 
 # from validate.bqskit_processor import (
@@ -170,7 +171,6 @@ def apply_qite_algorithm(
 def process_qasm_file(
         qasm_file: Path, n_transform_iter: int,
         platforms_to_run: List[str], round_number: int) -> Optional[Path]:
-    PLATFORMS = lazy_imports()
     console.log(
         f"QITE (R{str(round_number).zfill(3)}-T{str(n_transform_iter).zfill(3)}) -> {qasm_file}")
     metadata_folder = qasm_file.parent / "metadata"
@@ -178,6 +178,7 @@ def process_qasm_file(
     metadata_folder.mkdir(exist_ok=True)
     error_folder.mkdir(exist_ok=True)
 
+    PLATFORMS = lazy_imports()
     processors = []
     for platform in platforms_to_run:
         platform_info = PLATFORMS[platform]
@@ -210,43 +211,65 @@ def process_qasm_file(
     # randomly pick a processor
     processor = random.choice(processors)
 
-    def process_with_timeout(qasm_file, processor, timeout):
-        """Run processor.execute_qite_loop with a timeout."""
-        result_queue = multiprocessing.Queue()
+    def process_in_thread():
+        try:
+            return processor.execute_qite_loop(str(qasm_file))
+        except Exception as e:
+            console.log(f"Error processing {qasm_file}: {e}")
+            return None
 
-        def worker():
-            try:
-                final_path = processor.execute_qite_loop(str(qasm_file))
-                result_queue.put(final_path)
-            except Exception as e:
-                result_queue.put(e)  # Put the exception in the queue
+    # Start thread with timeout
+    thread = threading.Thread(target=process_in_thread)
+    thread.daemon = True
+    thread.start()
+    thread.join(timeout=10)
 
-        process = multiprocessing.Process(target=worker)
-        process.start()
-        process.join(timeout)
+    if thread.is_alive():
+        console.log(f"Processing {qasm_file} timed out after 10 seconds")
+        return None
 
-        if process.is_alive():
-            process.terminate()
-            process.join()  # Ensure the process is cleaned up
-            return TimeoutError("Processing timed out")
+    final_path = process_in_thread()
+    if final_path:
+        return Path(final_path)
+    return None
 
-        result = result_queue.get()
-        if isinstance(result, Exception):
-            raise result  # Re-raise the exception
-        return result
+    # def process_with_timeout(qasm_file, processor, timeout):
+    #     """Run processor.execute_qite_loop with a timeout."""
+    #     result_queue = multiprocessing.Queue()
 
-    try:
-        timeout = 10  # seconds
-        final_path = process_with_timeout(qasm_file, processor, timeout)
-        if final_path:
-            return Path(final_path)
+    #     def worker():
+    #         try:
+    #             final_path = processor.execute_qite_loop(str(qasm_file))
+    #             result_queue.put(final_path)
+    #         except Exception as e:
+    #             result_queue.put(e)  # Put the exception in the queue
 
-    except TimeoutError as e:
-        console.log(f"Error processing {qasm_file}: {e}")
-    except Exception as e:
-        console.log(f"Error processing {qasm_file}: {e}")
-        # console.print_exception()
-        # raise e
+    #     process = multiprocessing.Process(target=worker)
+    #     process.start()
+    #     process.join(timeout)
+
+    #     if process.is_alive():
+    #         process.terminate()
+    #         process.join()  # Ensure the process is cleaned up
+    #         return TimeoutError("Processing timed out")
+
+    #     result = result_queue.get()
+    #     if isinstance(result, Exception):
+    #         raise result  # Re-raise the exception
+    #     return result
+
+    # try:
+    #     timeout = 10  # seconds
+    #     final_path = process_with_timeout(qasm_file, processor, timeout)
+    #     if final_path:
+    #         return Path(final_path)
+
+    # except TimeoutError as e:
+    #     console.log(f"Error processing {qasm_file}: {e}")
+    # except Exception as e:
+    #     console.log(f"Error processing {qasm_file}: {e}")
+    #     # console.print_exception()
+    #     # raise e
 
     return None
 

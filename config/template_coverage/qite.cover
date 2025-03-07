@@ -2,7 +2,7 @@
 [run]
 branch = True
 source = {{PLATFORMS_PACKAGES}}
-concurrency = multiprocessing
+concurrency = thread
 data_file = {{FOLDER_WITH_DATA_FILE}}/.coverage
 
 [report]
