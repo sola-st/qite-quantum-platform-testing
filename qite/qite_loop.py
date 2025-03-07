@@ -137,7 +137,7 @@ def apply_qite_algorithm(
 
         for i, qasm_file in enumerate(qasm_to_process_this_round):
             if end_timestamp != -1 and time.time() > end_timestamp:
-                console.print("End timestamp reached, exiting")
+                console.print("Time limit exceeded. Exiting.")
                 exit(0)
             new_qasm = process_qasm_file(
                 qasm_file=qasm_file,
@@ -336,7 +336,7 @@ def main(
         config: Optional[str], end_timestamp: int) -> None:
 
     if end_timestamp != -1 and time.time() > end_timestamp:
-        console.print("End timestamp reached, exiting")
+        console.print("Time limit exceeded. Exiting.")
         exit(0)
 
     # by default run all platforms
