@@ -2,16 +2,15 @@
 
 # Script Name: collect_pytket_cov.sh
 # Purpose: Collect and generate coverage report for pytket.
-# Usage: ./collect_pytket_cov.sh <config-folder-name> <filepath-with-folder-path>
+# Usage: ./collect_pytket_cov.sh <folder-path-or-filepath>
 # Dependencies: gcovr
-
 
 # Function to print usage instructions
 usage() {
-    echo "Usage: $0 <config-folder-name> <filepath-with-folder-path>"
+    echo "Usage: $0 <folder-path-or-filepath>"
+    echo "       Argument can be either a direct folder path or a file containing the folder path"
     exit 1
 }
-
 
 # Function to copy the coverage report to the specified folder
 copy_coverage_report() {
@@ -21,22 +20,40 @@ copy_coverage_report() {
     echo "Coverage report copied to $folder"
 }
 
+# Function to get the folder path
+get_folder_path() {
+    local input="$1"
+    local folder
+
+    if [[ -d "$input" ]]; then
+        # Input is a directory
+        folder="$input"
+    elif [[ -f "$input" ]]; then
+        # Input is a file, read the folder path from it
+        folder=$(cat "$input")
+    else
+        echo "Error: Input is neither a valid folder nor a file"
+        exit 1
+    fi
+
+    echo "$folder"
+}
+
 # Main script execution
 main() {
-    # Get the config folder name and the file path from the arguments
-    local config_folder_name="${1:-}"
-    local filepath_with_folder_path="${2:-}"
+    # Get the path argument
+    local path_arg="${1:-}"
 
-    # Check if the config folder name and file path are provided
-    if [[ -z "$config_folder_name" || -z "$filepath_with_folder_path" ]]; then
+    # Check if the path argument is provided
+    if [[ -z "$path_arg" ]]; then
         usage
     fi
 
-    # Read the folder path from the file
+    # Get the folder path
     local folder
-    folder=$(cat "$filepath_with_folder_path")
+    folder=$(get_folder_path "$path_arg")
 
-    echo "Starting coverage collection for config folder: $config_folder_name"
+    echo "Starting coverage collection..."
 
     echo "Searching for GCDA files..."
     gcda_path=$(find /home/regularuser/.conan2/p/b/tket* -name "*.gcda" | grep -o '.*/Debug' | head -n 1)

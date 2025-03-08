@@ -9,6 +9,7 @@ from qite.qite_loop import lazy_imports, prepare_coverage_file
 import yaml
 import random
 import time
+import json
 
 """
 Here is a revised task description based on your additional requirements:
@@ -114,6 +115,16 @@ def convert_and_export_to_qasm(
     return str(exported_path)
 
 
+def override_last_line(file_path: Path, new_last_line: str) -> None:
+    """Override the last line of the file with the new_last_line."""
+    lines = file_path.read_text().splitlines()
+    if lines:
+        lines[-1] = new_last_line
+    else:
+        lines.append(new_last_line)
+    file_path.write_text("\n".join(lines) + "\n")
+
+
 def process_files(
         input_folder: Path, platforms: List[str],
         program_id_range: Optional[List[int]], coverage_enabled: bool,
@@ -137,6 +148,7 @@ def process_files(
         )
         cov.start()
 
+    generated_qasm_files = []
     for file_path in files_to_process:
         try:
             if end_timestamp != -1 and time.time() > end_timestamp:
@@ -153,8 +165,22 @@ def process_files(
                 circuit_file_name=file_path.stem + ".qasm",
                 platform=platform)
             console.log(f"Exported {export_path}")
+            if export_path:
+                generated_qasm_files.append(Path(export_path).name)
         except Exception as e:
             console.log(f"Error processing {file_path}: {e}")
+
+    stats_file = input_folder / "_qite_stats.jsonl"
+    # read last line
+    if stats_file.exists():
+        last_line = stats_file.read_text().splitlines()[-1]
+        print(last_line)
+        last_run = json.loads(last_line)
+        if last_run.get("round") == 0:
+            last_run["generated_qasm_files"] = last_run["generated_qasm_files"] + generated_qasm_files
+            last_run["n_program"] = len(last_run["generated_qasm_files"])
+        # overwrite the last line
+        override_last_line(stats_file, json.dumps(last_run))
 
     if coverage_enabled and template_coverage_file:
         output_path = Path(input_folder)

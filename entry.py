@@ -275,7 +275,9 @@ def replace_program_range(config, program_range: List[int]) -> Dict[str, Any]:
     new_commands = []
     for command in new_config['commands']:
         new_command = command.copy()
-        new_command['config']['program_id_range'] = program_range
+        if 'config' in new_command:
+            if 'program_id_range' in new_command['config']:
+                new_command['config']['program_id_range'] = program_range
         new_commands.append(new_command)
     new_config['commands'] = new_commands
     return new_config
@@ -357,7 +359,8 @@ def main(config: str, continuous_fuzzing: bool) -> None:
                     f"== Command to run:\n{command}==")
                 run_command(command=command, end_timestamp=end_timestamp)
 
-            if end_timestamp != -1 and int(datetime.datetime.now().timestamp()) > end_timestamp:
+            if end_timestamp != -1 and int(
+                    datetime.datetime.now().timestamp()) > end_timestamp:
                 console.print("Time limit exceeded. Exiting.")
                 break
 

@@ -146,6 +146,8 @@ def generate_qasm_programs(
     starting_index = get_latest_index(
         generation_output_path, extensions=["py", "qasm"]) + 1
 
+    generated_qasm_files = []
+
     for i in range(starting_index, num_programs + starting_index):
         if end_timestamp != -1 and time.time() > end_timestamp:
             console.print("Time limit exceeded. Exiting.")
@@ -171,6 +173,16 @@ def generate_qasm_programs(
             json.dump({"generation_time": generation_time}, f)
 
         console.log(f"Generated {qasm_file_path} and {time_file_path}")
+        generated_qasm_files.append(Path(qasm_file_path).name)
+
+    stats_file = generation_output_path / "_qite_stats.jsonl"
+    new_line = {
+        "round": 0,
+        "n_program": len(generated_qasm_files),
+        "generated_qasm_files": generated_qasm_files
+    }
+    with stats_file.open("a") as f:
+        f.write(json.dumps(new_line) + "\n")
 
 
 @click.command()

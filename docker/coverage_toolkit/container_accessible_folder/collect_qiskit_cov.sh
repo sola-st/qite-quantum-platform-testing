@@ -2,14 +2,12 @@
 
 # Script Name: collect_qiskit_cov.sh
 # Purpose: Aggregate and export Qiskit coverage data, then copy the result to a specified folder.
-# Usage: ./collect_qiskit_cov.sh <config-folder-name> <filepath-with-folder-path>
+# Usage: ./collect_qiskit_cov.sh <filepath-or-folder-path>
 # Dependencies: llvm-profdata, llvm-cov, lcov_cobertura
-
-# set -euo pipefail
 
 # Function to display usage information
 usage() {
-    echo "Usage: $0 <config-folder-name> <filepath-with-folder-path>"
+    echo "Usage: $0 <filepath-or-folder-path>"
     exit 1
 }
 
@@ -31,21 +29,27 @@ copy_coverage_report() {
 
 # Main script execution
 main() {
-    # Get the config folder name and the file path from the arguments
-    local config_folder_name="${1:-}"
-    local filepath_with_folder_path="${2:-}"
+    # Get the path argument
+    local path="${1:-}"
 
-    # Check if the config folder name and file path are provided
-    if [[ -z "$config_folder_name" || -z "$filepath_with_folder_path" ]]; then
+    # Check if the path is provided
+    if [[ -z "$path" ]]; then
         usage
     fi
 
-    # Read the folder path from the file
+    # Determine if the path is a file or directory and get the folder path
     local folder
-    folder=$(cat "$filepath_with_folder_path")
+    if [ -f "$path" ]; then
+        folder=$(cat "$path")
+    elif [ -d "$path" ]; then
+        folder="$path"
+    else
+        echo "Error: Provided path is neither a valid file nor a directory"
+        exit 1
+    fi
 
-    # check if there is any profraw file
-    if [ ! -f /home/regularuser/databank/qiskit-*.profraw ]; then
+    # check if there are any profraw files
+    if [ -z "$(compgen -G "/home/regularuser/databank/qiskit-*.profraw")" ]; then
         echo "Error: No profraw files found. Skipping coverage collection RUST."
         exit 0
     fi
@@ -59,4 +63,3 @@ main() {
 
 # Execute the main function
 main "$@"
-

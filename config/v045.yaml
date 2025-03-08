@@ -1,4 +1,4 @@
-# v045: generate more operations
+# v045: Support both QASM and QISKIT code generation
 
 # Changelog:
 # Support for rust coverage
@@ -75,13 +75,13 @@ commands:
       program_id_range: [0, <<BATCH_SIZE>>]
       coverage_every_round: False
 
-  # - module: qite.spot_divergences
-  #   arguments:
-  #     input_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
-  #     comparison_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/comparison
-  #     metadata_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/metadata
-  #   config:
-  #     program_id_range: [0, <<BATCH_SIZE>>]
+  - module: qite.spot_divergences
+    arguments:
+      input_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
+      comparison_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/comparison
+      metadata_folder: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>/metadata
+    config:
+      program_id_range: [0, <<BATCH_SIZE>>]
 
 
   # - module: qite.explore_warnings

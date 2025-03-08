@@ -161,7 +161,8 @@ RUN echo "source /home/regularuser/.venv/bin/activate" >> /home/regularuser/.bas
 USER root
 RUN apt-get update && apt-get install -y gcovr llvm-16 screen
 RUN echo 'root:Docker!' | chpasswd
-# RUN ln -fs /usr/share/zoneinfo/CET /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
+RUN ln -fs /usr/share/zoneinfo/CET /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
+ENV FOLDER_WITH_COVERAGE_COLLECTION_SCRIPTS=/home/regularuser/host/
 USER regularuser
 
 CMD ["/bin/bash"]

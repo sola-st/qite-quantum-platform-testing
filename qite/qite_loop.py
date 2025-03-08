@@ -1,6 +1,7 @@
 import click
 import random
 import yaml
+import json
 
 from pathlib import Path
 from typing import Optional, List
@@ -97,21 +98,46 @@ def lazy_imports():
     return PLATFORMS
 
 
+def get_program_last_round(input_folder: str) -> List[str]:
+    """Get the list of QASM programs generated in the last round."""
+    stats_file = Path(input_folder) / "_qite_stats.jsonl"
+    with stats_file.open("r") as f:
+        records = f.readlines()
+    last_record = json.loads(records[-1])
+    # drop any "None" values
+    return [qasm_file for qasm_file in last_record["generated_qasm_files"] if qasm_file != "None"]
+
+
+def get_round_last_program(input_folder: str) -> int:
+    """Get the last round number."""
+    stats_file = Path(input_folder) / "_qite_stats.jsonl"
+    with stats_file.open("r") as f:
+        records = f.readlines()
+    last_record = json.loads(records[-1])
+    return last_record["round"]
+
+
 def apply_qite_algorithm(
         input_folder: str, number_of_rounds: int, n_transform_iter: int,
         platforms_to_run: List[str], template_coverage_file: str,
         program_id_range: Optional[List[int]], coverage_enabled: bool,
         coverage_every_round: bool,
-        end_timestamp: int = -1) -> None:
-    """Apply the QITE algorithm to the QASM programs."""
-    input_path = Path(input_folder)
-    qasm_files = sorted(list(input_path.glob("*.qasm")))
+        end_timestamp: int = -1):
+    """Apply the QITE algorithm to the QASM programs.
 
-    if program_id_range:
-        qasm_files = [qasm_file for qasm_file in qasm_files
-                      if program_id_range[0] <=
-                      int(qasm_file.stem.split('_')[0]) <=
-                      program_id_range[1]]
+    It returns the list of QASM programs generated in the last round.
+    Together with the last round.
+    """
+    input_path = Path(input_folder)
+    # qasm_files = sorted(list(input_path.glob("*.qasm")))
+    # if program_id_range:
+    #     qasm_files = [qasm_file for qasm_file in qasm_files
+    #                   if program_id_range[0] <=
+    #                   int(qasm_file.stem.split('_')[0]) <=
+    #                   program_id_range[1]]
+    qasm_file_names = get_program_last_round(input_folder)
+    qasm_files = [input_path / qasm_file_name
+                  for qasm_file_name in qasm_file_names]
 
     qasm_to_process_this_round = qasm_files
     cov = prepare_coverage_file(
@@ -120,8 +146,8 @@ def apply_qite_algorithm(
         platforms=platforms_to_run
     )
     cov.start()
-    stats_file = input_path / "_qite_stats.txt"
-    for round_num in range(number_of_rounds):
+    last_round = get_round_last_program(input_folder)
+    for round_num in range(last_round, last_round + number_of_rounds):
         # if coverage_enabled:
         #     output_folder_coverage_round = input_path / \
         #         f"cov_round_{round_num + 1}"
@@ -161,8 +187,16 @@ def apply_qite_algorithm(
         #             ignore_errors=True
         #         )
 
+        generated_qasm_files = [
+            qasm_file.name for qasm_file in qasm_to_process_this_round]
+        new_record = {
+            "round": round_num + 1,
+            "n_program": len(generated_qasm_files),
+            "generated_qasm_files": generated_qasm_files
+        }
+        stats_file = input_path / "_qite_stats.jsonl"
         with stats_file.open("a") as f:
-            f.write(f'{{"round": {round_num + 1}, "n_program": {n_generated}}}\n')
+            f.write(json.dumps(new_record) + "\n")
 
     cov.stop()
     cov.save()

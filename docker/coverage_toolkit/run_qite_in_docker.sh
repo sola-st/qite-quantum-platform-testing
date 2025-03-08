@@ -99,13 +99,7 @@ run_docker() {
             which python && \
             bash /home/regularuser/host/install_qite.sh && \
             cd /home/regularuser/databank && \
-            python entry.py --config $CONFIG_FILE --continuous_fuzzing | tee /tmp/full_output.txt && \
-            tail -n 1 /tmp/full_output.txt > /home/regularuser/databank/output_folder.txt && \
-            rm /tmp/full_output.txt && \
-            bash /home/regularuser/host/collect_qiskit_cov.sh $CONFIG_NAME /home/regularuser/databank/output_folder.txt && \
-            bash /home/regularuser/host/collect_pytket_cov.sh $CONFIG_NAME /home/regularuser/databank/output_folder.txt && \
-            bash /home/regularuser/host/collect_python_cov.sh $CONFIG_NAME /home/regularuser/databank/output_folder.txt && \
-            python -m qite.compute_coverage --folder_path /home/regularuser/databank/output_folder.txt
+            python entry.py --config $CONFIG_FILE --continuous_fuzzing
         \""
 
     echo "$DOCKER_CMD"
