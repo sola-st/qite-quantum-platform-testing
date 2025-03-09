@@ -1,6 +1,6 @@
 # v047: QITE with coverage every round
 
-batch_size: 100
+batch_size: 1000
 budget_time_sec: 3600 #28800  # 8 hours
 
 
