@@ -173,9 +173,8 @@ def fill_and_load_config(config_file: Path) -> Dict[str, Any]:
     raw_config = config_file.read_text()
     unique_id = str(uuid4())[:6]
     raw_config = raw_config.replace(
-        '<<RUN_FOLDER>>', datetime.datetime.now().strftime('%Y_%m_%d__%H_%M'))
-    # '<<RUN_FOLDER>>', datetime.datetime.now().strftime('%Y_%m_%d__%H_%M') +
-    # unique_id)
+        '<<RUN_FOLDER>>', datetime.datetime.now().strftime('%Y_%m_%d__%H_%M') +
+        "_" + unique_id)
     raw_config = raw_config.replace(
         '<<THIS_FILE_NAME>>', config_file.stem)
 
