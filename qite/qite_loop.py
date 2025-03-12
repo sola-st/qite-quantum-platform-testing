@@ -14,6 +14,7 @@ import signal
 import coverage
 # import multiprocessing
 import threading
+import queue
 import time
 
 # from validate.bqskit_processor import (
@@ -245,15 +246,24 @@ def process_qasm_file(
     # randomly pick a processor
     processor = random.choice(processors)
 
-    def process_in_thread():
+    def execute_qite(qasm_file_str: str) -> Optional[str]:
+        """Execute QITE loop for a given QASM file."""
+        return processor.execute_qite_loop(qasm_file_str)
+
+    def run_in_thread(func, args, result_queue):
+        """Runs a function in a thread and puts the result in a queue."""
         try:
-            return processor.execute_qite_loop(str(qasm_file))
+            result = func(*args)
+            result_queue.put(result)
         except Exception as e:
             console.log(f"Error processing {qasm_file}: {e}")
-            return None
+            result_queue.put(None)
 
-    # Start thread with timeout
-    thread = threading.Thread(target=process_in_thread)
+    result_queue = queue.Queue()
+    thread = threading.Thread(
+        target=run_in_thread,
+        args=(execute_qite, (str(qasm_file),), result_queue)
+    )
     thread.daemon = True
     thread.start()
     thread.join(timeout=10)
@@ -262,7 +272,7 @@ def process_qasm_file(
         console.log(f"Processing {qasm_file} timed out after 10 seconds")
         return None
 
-    final_path = process_in_thread()
+    final_path = result_queue.get()
     if final_path:
         return Path(final_path)
     return None
