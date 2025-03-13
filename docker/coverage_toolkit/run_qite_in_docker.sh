@@ -99,7 +99,7 @@ run_docker() {
             which python && \
             bash /home/regularuser/host/install_qite.sh && \
             cd /home/regularuser/databank && \
-            python entry.py --config $CONFIG_FILE
+            python entry.py --config $CONFIG_FILE --continuous_fuzzing
         \""
 
     echo "$DOCKER_CMD"
