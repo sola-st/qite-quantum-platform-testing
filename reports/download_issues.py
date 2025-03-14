@@ -102,7 +102,9 @@ def download_issues(
             filename = f"{owner}_{repo}_{issue_number}.txt"
             if to_anonymize:
                 # hash the filename
-                filename = hashlib.md5(filename.encode()).hexdigest()[:6] + '.txt'
+                filename = hashlib.md5(
+                    github_link.encode()).hexdigest()[
+                    : 6] + '.txt'
             with open(os.path.join(output_folder, filename), 'w') as f:
                 f.write(issue_content)
 
@@ -111,9 +113,17 @@ def download_issues(
             with open(os.path.join(output_folder, f"{owner}_{repo}_{issue_number}.txt"), 'w') as f:
                 f.write(f"Error: {str(e)}")
 
+    if any(df['github_link'].str.contains("https://github.com")):
+        anonymized_csv = bug_csv.replace('.csv', '_anonymized.csv')
+        df_bugs = pd.read_csv(bug_csv)
+        df_bugs['github_link'] = df_bugs['github_link'].apply(
+            lambda x: hashlib.md5(x.encode()).hexdigest()[:6])
+        df_bugs.to_csv(anonymized_csv, index=False)
+        print(f"Anonymized CSV saved to {anonymized_csv}")
 
 # Example usage:
 # python -m reports.download_issues -i reports/bugs_v001.csv -o reports/github_issues_full --full --to_anonymize "John Doe"
+
 
 if __name__ == '__main__':
     download_issues()

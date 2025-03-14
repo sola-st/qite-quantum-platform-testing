@@ -1,0 +1,18 @@
+github_link,platform,short_desc,status,oracle,crash_msg,substr_crash_msg,is_still_triggerable
+6159e8,PennyLane,Unexpected reallocation of gates to different qubits,Confirmed,Equivalence,,not equivalent,no_because_of_workaround
+c9214f,Qiskit,Missing standard `rxx` gate definition,Confirmed,Crash,"QASM2ParseError : ""< input >:3 ,27: 'rxx ' is not defined in this scope """,rxx ' is not defined in this scope ,no_because_of_workaround
+9f9955,BQSKit,Unrecognized delay gate,Confirmed,Crash,LangException: Unrecognized gate: delay.,Unrecognized gate: delay,yes_if_enabling_gate
+c0770e,TKET,Error converting decomposed circuit (`PhasedX` op),Confirmed,Crash,"Cannot print command of type: PhasedX(0.536226, 0.5)",Cannot print command of type: PhasedX,yes_in_principle
+078821,BQSKit,Missing controlled phase `cs` gate definition,Confirmed,Crash,cs' is not defined in this scope,cs' is not defined in this scope,yes_in_principle
+8282ba,PennyLane,Error exporting QASM file: `MidMeasureMP` op,Confirmed,Crash,Operation MidMeasureMP not supported by the QASM serializer,Operation MidMeasureMP not supported by the QASM serializer,yes_in_principle
+ef8d68,PennyLane,Unitary matrix mismatch in `cu` gate implementation,Confirmed,Equivalence,,not equivalent,yes_in_principle
+03bb9a,TKET,Incompat. of `PhasedX` gate with `GreedyPauliSimp` opt,Confirmed,Equivalence,,not equivalent,yes_in_principle
+467788,TKET,Unsupported `ISwap` gate,Fixed,Crash,Gate has an invalid number of parameters,invalid number of parameters,yes_if_enabling_gate
+01b93e,TKET,`ZXGraphlikeOpt` pass create not-equivalent circuit,Fixed,Equivalence,,not equivalent,yes_in_principle
+4cf7ea,TKET,`FullPeepholeOpt` pass fails with `mcrz` gate,Fixed,Crash,Cannot obtain matrix from op: Unitary1qBox,Unitary1qBox,yes_in_principle
+b9f9d9,TKET,Incorrect `MCX` gate generation (`c4x` instead of `c3x`),Fixed,Crash,"c4x' takes 5 quantum arguments, but got 4",c4x' takes 5 quantum arguments,yes_in_principle
+caaa51,TKET,Incorrect `u0` gate conversion to `u3`,Fixed,Crash,Predicate requirements are not satisfied: GateSetPredicate:{ PhasedX Measure PhaseGadget ZZMax Tdg T Ry Rx Z X PauliExpBox Rz Y S Sdg V Vdg SWAP H YYPhase CY XXPhase CX ZZPhase CZ },Predicate requirements are not satisfied: GateSetPredicate:{ PhasedX Measure PhaseGadget ZZMax Tdg T Ry Rx Z X PauliExpBox Rz Y S Sdg V Vdg SWAP H YYPhase CY XXPhase CX ZZPhase CZ },yes_in_principle
+c11a22,TKET,`FullPeepholeOpt` pass fails with `u0` and `c4x` gates ,Fixed,Crash,Operation is not a gate: CustomGate,Operation is not a gate: CustomGate,yes_in_principle
+7ad324,BQSKit,Duplicate classical register definition,Reported,Crash,Classical register redeclared: cr.,Classical register redeclared,yes_if_enabling_measure
+c495b1,BQSKit,Crash with DaggerGate,Reported,Crash,DaggerGate' object has no attribute '_qasm_name',DaggerGate' object has no attribute '_qasm_name',yes_in_principle
+db4380,BQSKit,Missing Ryy gate definition,Reported,Crash,Cannot parse gate of type: ryy Line:58. ,Cannot parse gate of type: ryy,yes_in_principle
