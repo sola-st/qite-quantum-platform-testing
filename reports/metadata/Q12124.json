@@ -1,9 +1,0 @@
-{
-    "exception_message": "\"<input>:3,27: 'rxx' is not defined in this scope\"",
-    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/qiskit_circuit_5q_10g_1_56f829_43fca2_error_min.py\", line 177, in <module>\n    parser_call(qasm_file)\n  File \"/workspace/qiskit_circuit_5q_10g_1_56f829_43fca2_error_min.py\", line 138, in import_from_qasm_with_qiskit\n    circuit = qasm2.loads(qasm_content)\n  File \"/usr/local/lib/python3.10/site-packages/qiskit/qasm2/__init__.py\", line 587, in loads\n    return _parse.from_bytecode(\n  File \"/usr/local/lib/python3.10/site-packages/qiskit/qasm2/parse.py\", line 214, in from_bytecode\n    for op in bc:\nqiskit.qasm2.exceptions.QASM2ParseError: \"<input>:3,27: 'rxx' is not defined in this scope\"\n",
-    "current_file": "qiskit_circuit_5q_10g_1_56f829_43fca2_error_min.py",
-    "involved_functions": [
-        "import_from_qasm_with_qiskit",
-        "export_to_qasm_with_qiskit"
-    ]
-}
