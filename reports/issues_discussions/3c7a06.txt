@@ -1,0 +1,253 @@
+Title: `ZXGraphlikeOptimisation` Pass Failing to Preserve Circuit Equivalence
+Author: <<ANONYMOUS>>
+
+## Versions
+```
+pytket version: 1.33.1
+qiskit version: 1.2.4
+```
+
+
+
+## Expected behavior
+The circuit optimized using the ZX-calculus via the function pass `ZXGraphlikeOptimisation` should be equivalent to the original circuit.
+
+## Actual behavior
+The optimized circuit is not equivalent to the original one. The unitary matrices of the two circuits are different, indicating that they represent different quantum operations.
+
+## Additional information
+The issue reproduces consistently, every time the code is run. The QCEC tool also confirms that the two circuits are not equivalent.
+
+## Source code
+```python
+from qiskit import QuantumCircuit
+
+qc = QuantumCircuit(2)
+qc.h(0)
+qc.cx(0, 1)
+
+from pytket.extensions.qiskit import qiskit_to_tk
+from pytket.qasm import circuit_to_qasm_str
+from pytket.passes import ZXGraphlikeOptimisation
+
+
+tk_circ = qiskit_to_tk(qc)
+
+optimization_pass = ZXGraphlikeOptimisation()
+optimization_pass.apply(tk_circ)
+opt_circ_qasm = circuit_to_qasm_str(
+    tk_circ, header="qelib1", maxwidth=200)
+print(opt_circ_qasm)
+# Output:
+# OPENQASM 2.0;
+# include "qelib1.inc";
+#
+# qreg q[2];
+# cz q[0],q[1];
+# h q[0];
+# h q[1];
+# cz q[0],q[1];
+# h q[1];
+```
+
+## Tracebacks
+There are no direct error tracebacks related to the issue. However, the verification using the QCEC tool and the composition of the circuits reveal that the optimized circuit is not equivalent to the original one.
+```python
+
+qasm_a = """
+OPENQASM 2.0;
+include "qelib1.inc";
+
+qreg q[2];
+cz q[0],q[1];
+h q[0];
+h q[1];
+cz q[0],q[1];
+h q[1];
+"""
+
+qasm_b = """
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+h q[0];
+cx q[0],q[1];
+"""
+
+from mqt import qcec
+result = qcec.verify(
+    qc_a, qc_b,
+    transform_dynamic_circuit=True)
+equivalence = str(result.equivalence)
+result.equivalence
+# OUTPUT
+# <EquivalenceCriterion.not_equivalent: 0>
+
+qc_mixed = Operator(qc_a).compose(Operator(qc_b).adjoint())
+unitary_mixed = qc_mixed.data
+# round all entries to the 3rd decimal
+unitary_mixed = np.round(unitary_mixed, 3)
+print("\nUnitary of qc_a * qc_b^-1:")
+print(unitary_mixed)
+
+# OUTPUT
+# Unitary of qc_a * qc_b^-1:
+# [[ 1.+0.j  0.+0.j  0.+0.j  0.+0.j]
+#  [ 0.+0.j  1.+0.j  0.+0.j  0.+0.j]
+#  [ 0.+0.j  0.+0.j  1.+0.j  0.+0.j]
+#  [ 0.+0.j  0.+0.j -0.+0.j -1.+0.j]]
+```
+
+
+## Additional context
+
+Here you can see how the unitary matrices of the two circuits are different:
+```python
+qasm_a = """
+OPENQASM 2.0;
+include "qelib1.inc";
+
+qreg q[2];
+cz q[0],q[1];
+h q[0];
+h q[1];
+cz q[0],q[1];
+h q[1];
+"""
+
+qasm_b = """
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+h q[0];
+cx q[0],q[1];
+"""
+
+import numpy as np
+from numpy.testing import assert_allclose
+from qiskit import QuantumCircuit
+from qiskit.quantum_info import Operator
+
+# Read the QASM strings into quantum circuits
+qc_a = QuantumCircuit.from_qasm_str(qasm_a)
+qc_b = QuantumCircuit.from_qasm_str(qasm_b)
+
+# Get the unitary matrices
+unitary_a = Operator(qc_a).data
+unitary_b = Operator(qc_b).data
+
+# Print the unitary matrices
+print("Unitary of qc_a:")
+print(unitary_a)
+
+print("\nUnitary of qc_b:")
+print(unitary_b)
+
+# assert that they are the same
+assert unitary_a.shape == unitary_b.shape
+# assert_allclose(unitary_a, unitary_b, atol=1e-5)
+import numpy as np
+# flatten the two and the iterate element by element and print when two are different
+for a, b in zip(unitary_a.flatten(), unitary_b.flatten()):
+    if not np.isclose(a, b, atol=1e-5):
+        print("Different elements:")
+        print(a, b)
+        break
+# OUTPUT:
+# Unitary of qc_a:
+# [[ 0.70710678+0.j  0.70710678+0.j  0.        +0.j  0.        +0.j]
+#  [ 0.        +0.j  0.        +0.j  0.70710678+0.j  0.70710678+0.j]
+#  [ 0.        +0.j  0.        +0.j  0.70710678+0.j -0.70710678+0.j]
+#  [ 0.70710678+0.j -0.70710678+0.j  0.        +0.j  0.        +0.j]]
+
+# Unitary of qc_b:
+# [[ 0.70710678+0.j  0.70710678+0.j  0.        +0.j  0.        +0.j]
+#  [ 0.        +0.j  0.        +0.j  0.70710678+0.j -0.70710678+0.j]
+#  [ 0.        +0.j  0.        +0.j  0.70710678+0.j  0.70710678+0.j]
+#  [ 0.70710678+0.j -0.70710678+0.j  0.        +0.j  0.        +0.j]]
+# Different elements:
+# (0.7071067811865474+0j) (-0.7071067811865475+0j)
+```
+
+Let me know if you need more information, thanks in advance!
+
+
+Comments:
+Author: CalMacCQ
+Hi there, thanks for making an issue.
+
+We should look at this to rule out a bug.
+
+I think what may be causing an issue here is that after the ZX pass is applied the circuit has an [implicit qubit permutation](https://docs.quantinuum.com/tket/user-guide/manual/manual_circuit.html#implicit-qubit-permutations). Per the [docs](https://docs.quantinuum.com/tket/api-docs/qasm.html) these permutations are not handled by the qasm converter.
+
+```python
+from qiskit import QuantumCircuit
+from pytket.extensions.qiskit import qiskit_to_tk
+from pytket.passes import ZXGraphlikeOptimisation
+
+from pytket import Circuit
+
+qc = QuantumCircuit(2)
+qc.h(0)
+qc.cx(0, 1)
+
+
+tk_circ = qiskit_to_tk(qc)
+u1 = tk_circ.get_unitary()
+
+optimization_pass = ZXGraphlikeOptimisation()
+optimization_pass.apply(tk_circ)
+
+u2 = tk_circ.get_unitary()
+
+
+print(tk_circ.implicit_qubit_permutation())
+```
+
+Output: 
+```
+{q[0]: q[1], q[1]: q[0]}
+```
+
+If I check for equivalence in pure pytket I get the expected answer
+
+```python
+from pytket.utils import compare_unitaries
+
+print("Equivalent?", compare_unitaries(u1, u2))
+```
+
+Output:
+```
+Equivalent? True
+```
+
+I'll look into this more tomorrow to make sure I didn't miss something with the other libraries that you're using.
+---
+Author: cqc-alec
+@CalMacCQ is correct: the apparent difference is due to the implicit qubit permutation introduced by the pass. This means that there is an implicit SWAP gate at the end of the compiled circuit. Note that the implicit qubit permutation is _ignored_ by the QASM conversion function (see the note on [this docs page](https://docs.quantinuum.com/tket/api-docs/qasm.html)).
+---
+Author: <<ANONYMOUS>>
+Thank you both for the quick replies! I understand this behavior is documented, but I’m curious about the rationale behind it.
+
+From a user perspective, this behavior seems unintuitive and potentially problematic. For instance, exporting to QASM with implicit permutations and then running it elsewhere could lead to different unitaries being produced, which might surprise users expecting consistent results across platforms.
+
+Would it make sense to resolve implicit permutations during export (e.g., by introducing a swap gate)? This way, the exported QASM would better reflect the intended circuit and avoid inconsistencies. I’d love to hear your thoughts on whether this could be improved or if there’s another way to address this.
+---
+Author: cqc-alec
+The rationale is that we can save on gates when running the circuit on devices -- implementing a SWAP gate requires three CX gates, which adds a significant amount of noise and so degrades the quality of the results. Furthermore, this has no effect on actual measurement results -- only the labelling of the qubits (not the bits).
+
+Most of the pytket passes that can introduce these swaps have an optional `allow_swaps` parameter that can be set to `False` to disallow them; but I'm afraid `ZXGraphlikeOptimisation` does not. I'll make a new issue to add this option.
+
+---
+Author: cqc-alec
+> I'll make a new issue to add this option.
+
+https://github.com/CQCL/tket/issues/1752
+
+
+---
+Author: CalMacCQ
+Maybe one option would be to give a warning when converting such a pytket circuit to qasm? Maybe that's not ideal for some users who optimise circuits and expect these permutations. 
+
+One thing we do already in pytket-qiskit is give a warning in `tk_to_qiskit` if the input pytket circuit has an implicit qubit permutation.

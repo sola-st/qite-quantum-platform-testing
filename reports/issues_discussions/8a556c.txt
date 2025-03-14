@@ -1,0 +1,170 @@
+Title: [BUG] Error Exporting QASM File: `MidMeasureMP` Operation Not Supported
+Author: <<ANONYMOUS>>
+
+### Expected behavior
+
+The expected behavior is that the circuit imported from QASM with a final measurement can be re-exported to QASM without any errors. Specifically, the measurement operation should be preserved and not converted to a mid-measure operation.
+
+### Actual behavior
+
+The actual behavior is that when trying to re-export the circuit to QASM, a ValueError is raised stating that the operation `MidMeasureMP` is not supported by the QASM serializer. This is unexpected because the initial QASM file only contained a final measurement, and it is unclear why the measurement is being converted to a mid-measure operation.
+
+### Additional information
+
+To reproduce the issue, run the following code.
+The error is 100% reproducible and is not dependent on any specific hardware or environment. The issue appears to be with the way Pennylane handles measurement operations when importing and exporting circuits to and from QASM.
+Let me know if you need more info
+
+### Source code
+
+```shell
+qasm_content = """
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[1];
+creg c[1];
+x q[0];
+measure q[0] -> c[0];
+"""
+import pennylane as qml
+
+circuit = qml.from_qasm(qasm_content)
+
+print(qml.draw(circuit)())
+# OUTPUT:
+# 0: ──X──┤↗├─┤
+
+# EXPORTING TO QASM
+from pennylane.tape import make_qscript
+qs = make_qscript(circuit)()
+qasm_str_pennylane = qs.to_openqasm()
+print(qasm_str_pennylane)
+
+# OUTPUT:
+# raises ValueError: Operation MidMeasureMP not supported by the QASM serializer
+```
+
+### Tracebacks
+
+```shell
+``python
+---------------------------------------------------------------------------
+KeyError                                  Traceback (most recent call last)
+File python3.10/site-packages/pennylane/tape/qscript.py:1178, in QuantumScript.to_openqasm(self, wires, rotations, measure_all, precision)
+   1177 try:
+-> 1178     gate = OPENQASM_GATES[op.name]
+   1179 except KeyError as e:
+
+KeyError: 'MidMeasureMP'
+
+The above exception was the direct cause of the following exception:
+
+ValueError                                Traceback (most recent call last)
+Cell In[44], line 3
+      1 from pennylane.tape import make_qscript
+      2 qs = make_qscript(circuit)()
+----> 3 qasm_str_pennylane = qs.to_openqasm()
+      4 print(qasm_str_pennylane)
+
+File python3.10/site-packages/pennylane/tape/qscript.py:1180, in QuantumScript.to_openqasm(self, wires, rotations, measure_all, precision)
+   1178     gate = OPENQASM_GATES[op.name]
+   1179 except KeyError as e:
+-> 1180     raise ValueError(f"Operation {op.name} not supported by the QASM serializer") from e
+   1182 wire_labels = ",".join([f"q[{wires.index(w)}]" for w in op.wires.tolist()])
+   1183 params = ""
+
+ValueError: Operation MidMeasureMP not supported by the QASM serializer
+```
+
+### System information
+
+```shell
+Name: PennyLane
+Version: 0.38.0
+Summary: PennyLane is a cross-platform Python library for quantum computing, quantum machine learning, and quantum chemistry. Train a quantum computer the same way as a neural network.
+Home-page: https://github.com/PennyLaneAI/pennylane
+Author: 
+Author-email: 
+License: Apache License 2.0
+Location: .../lib/python3.10/site-packages
+Requires: appdirs, autograd, autoray, cachetools, networkx, numpy, packaging, pennylane-lightning, requests, rustworkx, scipy, toml, typing-extensions
+Required-by: PennyLane-qiskit, PennyLane_Lightning
+
+Platform info:           Linux-5.15.0-130-generic-x86_64-with-glibc2.35
+Python version:          3.10.14
+Numpy version:           1.26.4
+Scipy version:           1.14.1
+Installed devices:
+- qiskit.aer (PennyLane-qiskit-0.38.1)
+- qiskit.basicaer (PennyLane-qiskit-0.38.1)
+- qiskit.basicsim (PennyLane-qiskit-0.38.1)
+- qiskit.remote (PennyLane-qiskit-0.38.1)
+- default.clifford (PennyLane-0.38.0)
+- default.gaussian (PennyLane-0.38.0)
+- default.mixed (PennyLane-0.38.0)
+- default.qubit (PennyLane-0.38.0)
+- default.qubit.autograd (PennyLane-0.38.0)
+- default.qubit.jax (PennyLane-0.38.0)
+- default.qubit.legacy (PennyLane-0.38.0)
+- default.qubit.tf (PennyLane-0.38.0)
+- default.qubit.torch (PennyLane-0.38.0)
+- default.qutrit (PennyLane-0.38.0)
+- default.qutrit.mixed (PennyLane-0.38.0)
+- default.tensor (PennyLane-0.38.0)
+- null.qubit (PennyLane-0.38.0)
+- lightning.qubit (PennyLane_Lightning-0.38.0)
+```
+
+### Existing GitHub issues
+
+- [x] I have searched existing GitHub issues to make sure the issue does not already exist.
+
+Comments:
+Author: <<ANONYMOUS>>
+
+Checking this test file `tests/circuit_graph/test_qasm.py` it seems that the final measurement is not among those operation that should be impossible to support in the QASM serializer, like `DoubleExcitationPlus`: https://github.com/PennyLaneAI/pennylane/blob/58d4f4fb4893e1d26e4797a9ff489cf98f474510/tests/circuit_graph/test_qasm.py#L238
+
+What about something like this to handle the conversion of MidMeasureMP to QASM measurement? 
+
+At this location:
+https://github.com/PennyLaneAI/pennylane/blob/58d4f4fb4893e1d26e4797a9ff489cf98f474510/pennylane/tape/qscript.py#L1240
+
+Apply this change:
+```python
+for op in operations:
+    # NEW Code ----------------------------------------------
+    if op.name == "MidMeasureMP":
+        # Convert MidMeasureMP to QASM measurement
+        for wire in op.wires.tolist():
+            qasm_str += f"measure q[{wires.index(wire)}] -> c[{wires.index(wire)}];\n"
+        continue
+    # ------------------------------------------------------
+
+    try:
+        gate = OPENQASM_GATES[op.name]
+    except KeyError as e:
+        raise ValueError(f"Operation {op.name} not supported by the QASM serializer") from e
+
+    wire_labels = ",".join([f"q[{wires.index(w)}]" for w in op.wires.tolist()])
+    params = ""
+
+    if op.num_params > 0:
+        # If the operation takes parameters, construct a string
+        # with parameter values.
+        if precision is not None:
+            params = "(" + ",".join([f"{p:.{precision}}" for p in op.parameters]) + ")"
+        else:
+            # use default precision
+            params = "(" + ",".join([str(p) for p in op.parameters]) + ")"
+
+    qasm_str += f"{gate}{params} {wire_labels};\n"
+```
+Let me know it that could be a good idea to implement it to fix it. I can try to make a PR for that.
+
+---
+Author: albi3ro
+Thanks for opening this issue @<<ANONYMOUS>> .
+
+We would welcome an external contribution on this. If you have any questions, feel free to ask here, or open up a PR and start a conversation there.
+
+Your provided code looks promising. I would note that the creg we currently create is for all the terminal measurements. We may want to create an additional classical register for the mid-circuit measurements.

@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 import click
+import hashlib
 
 
 @click.command()
@@ -99,6 +100,9 @@ def download_issues(
                     to_anonymize, '<<ANONYMOUS>>')
 
             filename = f"{owner}_{repo}_{issue_number}.txt"
+            if to_anonymize:
+                # hash the filename
+                filename = hashlib.md5(filename.encode()).hexdigest()[:6] + '.txt'
             with open(os.path.join(output_folder, filename), 'w') as f:
                 f.write(issue_content)
 

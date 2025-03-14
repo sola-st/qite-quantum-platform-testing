@@ -1,0 +1,75 @@
+Title: Standard Gates in 'qelib1.inc' Not Recognized by `qiskit.qasm2.loads`
+Author: p51lee
+
+### Environment
+
+- **Qiskit version**: 1.0.2
+- **Python version**: 3.10.9
+- **Operating system**: MacOS 14.4
+
+
+### What is happening?
+
+`qiskit.qasm2.loads` is not recognizing standard gates provided in [qelib1.inc](https://github.com/Qiskit/qiskit/blob/main/qiskit/qasm/libs/qelib1.inc).
+
+### How can we reproduce the issue?
+
+To reproduce the issue, execute the following Python code:
+```python
+import qiskit
+
+qasm = """
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+swap q[0], q[1];
+"""
+circuit = qiskit.qasm2.loads(qasm)
+```
+Running this code results in a `QASMParseError`:
+```
+qiskit.qasm2.exceptions.QASM2ParseError: "<input>:10,6: 'swap' is not defined in this scope"
+```
+This error is also happening with other standard gates from `qelib1.inc`:
+* `u0`
+* `u`
+* `p`
+* `sx`
+* `sxdg`
+* `swap`
+* `cswap`
+* `crx`
+* `cry`
+* `cp`
+* `csx`
+* `cu`
+* `rxx`
+* `rzz`
+* `rccx`
+* `rc3x`
+* `c3x`
+* `c3sqrtx`
+* `c4x`
+
+### What should happen?
+
+The parser should recognize and correctly process these gates as pre-defined, analogous to how it handles the Hadamard gate.
+
+### Any suggestions?
+
+_No response_
+
+Comments:
+Author: jakelishman
+The version of the "`qelib1.inc`" file you've linked here is actually a mutant version that Qiskit amended over time, and does not reflect the original definition of the file - all the gates you've commented on here are legacy Qiskit extensions to it.  The [`qasm2.load` and `qasm2.loads` parsers both treat `qelib1.inc` exactly as specified in the original paper](https://docs.quantum.ibm.com/api/qiskit/qasm2#loads), and [that documentation also explains the differences between the "real" and "legacy" versions](https://docs.quantum.ibm.com/api/qiskit/qasm2#legacy-compatibility).
+
+Unfortunately, `qiskit.qasm2.dumps` still _outputs_ assuming the mutant version of `qelib1.inc` right now - we have a discussion (#10737) on fixing that situation, but we keep struggling to find time to prioritise it.  In the mean time, you can make `qasm2.loads` (and `load`) understand the whole legacy file by doing:
+
+```python
+from qiskit import qasm2
+
+qasm2.loads(program, custom_instructions=qasm2.LEGACY_CUSTOM_INSTRUCTIONS)
+```
+---
+Author: p51lee
+Thank you for the clarification. Indeed, I encountered issues when trying to dump and load QASM programs. I'll use `LEGACY_CUSTOM_INSTRUCTIONS` in the meantime.
