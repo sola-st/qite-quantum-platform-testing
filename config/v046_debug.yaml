@@ -3,8 +3,8 @@
 # Debugging strategies:
 # 1. remove the multiprocessing usage
 
-batch_size: 300
-budget_time_sec: 100 #3600
+batch_size: 100
+budget_time_sec: 3600
 
 
 commands:
@@ -19,14 +19,16 @@ commands:
       output_dir: program_bank/<<THIS_FILE_NAME>>/<<RUN_FOLDER>>
     config:
       gate_set: [
-        'h', 'x', 'y', 'z', 'cx', 'cz', 'rx', 'ry', 'rz', 's', 't', 'tdg',
-        'sdg', 'swap', 'ccx', 'cswap', 'crz',
-        'u3', 'u2', 'u1', 'cx', 'id', 'u0', 'u', 'p', 'x', 'y', 'z', 'h',
-        's', 'sdg', 't', 'tdg', 'rx', 'ry', 'rz', 'sx', 'sxdg', 'cz', 'cy',
-        'swap', 'ch', 'ccx', 'cswap', 'crx', 'cry', 'crz', 'cu1', 'cp',
-        'cu3', 'csx', 'cu', 'rxx', 'rzz',
+        # 'h', 'x', 'y', 'z', 'cx', 'cz', 'rx', 'ry', 'rz', 's', 't', 'tdg',
+        # 'sdg', 'swap', 'ccx', 'cswap', 'crz',
+        # 'u3', 'u2', 'u1', 'cx', 'id', 'u0', 'u', 'p', 'x', 'y', 'z', 'h',
+        # 's', 'sdg', 't', 'tdg', 'rx', 'ry', 'rz', 'sx', 'sxdg', 'cz', 'cy',
+        # 'swap', 'ch', 'ccx', 'cswap', 'crx', 'cry', 'crz', 'cu1', 'cp',
+        # 'cu3', 'csx', 'cu',
+        'rxx',
+        # 'rzz',
         # BQSKIT LIMITATION: gates not supported
-        'rccx', 'rc3x', 'c3x', 'c3sqrtx', 'c4x'
+        # 'rccx', 'rc3x', 'c3x', 'c3sqrtx', 'c4x'
       ]
 
 

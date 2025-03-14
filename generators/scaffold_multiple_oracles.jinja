@@ -148,6 +148,7 @@ for key, value in all_circuits_vars.items():
     # Section: Stage - Execution
     # TODO
 
+    new_qasm_files_with_provenance = deepcopy(qasm_files_with_provenance)
     # Section: Stage - QASM Parser
     parser_calls = get_functions(prefix="import_from_qasm")
     for parser_call in parser_calls:
@@ -167,8 +168,11 @@ for key, value in all_circuits_vars.items():
                         continue
 
                     try:
-                        optimize_call(
+                        optimized_files = optimize_call(
                             parsed_qc, var_name=var_name, output_dir=".")
+                        for optimized_file in optimized_files:
+                            new_qasm_files_with_provenance.append(
+                                (optimized_file, optimize_call.__name__))
                     except Exception as e:
                         stack_trace = traceback.format_exc()
                         involved_functions = [
@@ -185,7 +189,7 @@ for key, value in all_circuits_vars.items():
     from itertools import combinations
 
     compare_calls = get_functions(prefix="compare_qasm_")
-    for pair in combinations(qasm_files_with_provenance, 2):
+    for pair in combinations(new_qasm_files_with_provenance, 2):
         a_file, a_exporter = pair[0]
         b_file, b_exporter = pair[1]
         for compare_call in compare_calls:
