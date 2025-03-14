@@ -1,0 +1,11 @@
+{
+    "exception_message": "The circuits are not equivalent: /workspace/qiskit_circuit_5q_10g_7553_24d42f_76b26a_error_min_random_qc_pytket.qasm, /workspace/qiskit_circuit_5q_10g_7553_24d42f_76b26a_error_min_random_qc_qiskit.qasm",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/qiskit_circuit_5q_10g_7553_24d42f_76b26a_error_min.py\", line 179, in <module>\n    compare_call(a_file, b_file)\n  File \"/workspace/qiskit_circuit_5q_10g_7553_24d42f_76b26a_error_min.py\", line 138, in compare_qasm_via_qcec\n    raise ValueError(\nValueError: The circuits are not equivalent: /workspace/qiskit_circuit_5q_10g_7553_24d42f_76b26a_error_min_random_qc_pytket.qasm, /workspace/qiskit_circuit_5q_10g_7553_24d42f_76b26a_error_min_random_qc_qiskit.qasm\n",
+    "current_file": "qiskit_circuit_5q_10g_7553_24d42f_76b26a_error_min.py",
+    "involved_functions": [
+        "compare_qasm_via_qcec",
+        "export_to_qasm_with_pytket",
+        "export_to_qasm_with_qiskit"
+    ],
+    "timestamp": 1734529619.88225
+}

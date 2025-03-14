@@ -1,0 +1,10 @@
+{
+    "exception_message": "map::at",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/qiskit_circuit_5q_10g_3_8ce198_d84698_error_min.py\", line 162, in <module>\n    compare_call(a_file, b_file)\n  File \"/workspace/qiskit_circuit_5q_10g_3_8ce198_d84698_error_min.py\", line 120, in compare_qasm_via_qcec\n    result = qcec.verify(str(path_qasm_a), str(path_qasm_b),\n  File \"/usr/local/lib/python3.10/site-packages/mqt/qcec/verify.py\", line 59, in verify\n    ecm.run()\nIndexError: map::at\n",
+    "current_file": "qiskit_circuit_5q_10g_3_8ce198_d84698_error_min.py",
+    "involved_functions": [
+        "compare_qasm_via_qcec",
+        "export_to_qasm_with_pytket",
+        "export_to_qasm_with_qiskit"
+    ]
+}
