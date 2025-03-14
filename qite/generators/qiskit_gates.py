@@ -61,35 +61,6 @@ The signature of the gates are:
     "y(qubit)",
     "z(qubit)"
 
-Create an object hierarchy to track the position of the arguments that are qubits, classical bits, and parameters.
-theta, phi, lam, gamma, vx, vy, vz are parameters ranging from 0 to 2*pi.
-
-Create the object hierarchy of classes and dataclasses to represent the gates in Qiskit.
-The use cases it to use these classes to generate strings that reprent valid Qiskit code statements that can be used to generate quantum circuits.
-
-The creation of python statement takes:
-- the name of the variable of the circuit object (e.g. qc)
-- the name of the quantum register object (e.g. qr)
-- the name of the classical register object (e.g. cr)
-- the maximum number of qubits in the quantum register
-- the maximum number of classical bits in the classical register
-Then a set of gate objects is sampled and instantiated with random arguments,
-thus each gate should know the position of the qubits, classical bits, and parameters in the call.
-
-The main Gate class should have the method: .instantiate() that should return a string with the valid Qiskit code statement.
-Each Gate is initialized with the same parameters:
-- circuit_var: str
-- quantum_reg_var: str
-- classical_reg_var: str
-- max_qubits: int
-- max_bits: int
-
-I want to be able to generate many valid statement by just sampling the gate objects and calling the .instantiate() method.
-
-Examples of valid Qiskit code statements:
-- qc.cx(qr[0], qr[1])
-- qc.rz(1.234554, qr[0])
-- qc.ccx(qr[0], qr[1], qr[2])
 """
 from typing import List
 import random

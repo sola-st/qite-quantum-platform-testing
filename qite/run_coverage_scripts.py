@@ -6,46 +6,6 @@ import shutil
 import time
 import json
 
-"""
-**Objective**: Implement a command-line interface (CLI) in Python that reads and executes coverage collection scripts.
-
-**Requirements**:
-
-1. **Environment Variable Handling**:
-   - The script should read the `FOLDER_WITH_COVERAGE_COLLECTION_SCRIPTS` environment variable.
-   - If the environment variable is not set, the script should print an error message and terminate with exit code `0`.
-
-2. **Script Filtering**:
-   - The script should list all files in the specified folder that start with `collect_` and have a `.sh` extension.
-   - Only top-level files should be considered; subdirectories should be ignored.
-   - If no matching scripts are found, the script should notify the user and terminate.
-
-3. **Script Execution**:
-   - Each filtered script should be executed with the `--input_folder` parameter passed as a normal argument.
-   - The script should handle errors from the subscripts gracefully, logging any errors but continuing to execute the remaining scripts.
-   - The output of each subscript execution should be logged to a specified log file.
-
-4. **Input Folder Parameter**:
-   - The CLI script should accept a mandatory `--input_folder` parameter.
-   - The script should validate that the `--input_folder` parameter points to a valid directory. If not, it should print an error message and terminate with a non-zero exit code.
-
-5. **Optional Parameters**:
-   - The script should accept an optional `--end_timestamp` parameter as an integer.
-   - The `--end_timestamp` parameter should be ignored if provided.
-
-Convert the function above into a click v8 interface in Python.
-- map all the arguments to a corresponding option (in click) which is required
-- add all the default values of the arguments as default of the click options
-- use only underscores
-- add a main with the command
-- add the required imports
-Make sure to add a function and call that function only in the main cli command.
-The goal is to be able to import that function also from other files.
-
-
-
-"""
-
 
 def collect_and_store_xml_files(input_folder: str, output_folder: str) -> str:
     """Function to collect XML files from input folder and store them in numbered subfolders"""

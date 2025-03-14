@@ -17,52 +17,6 @@ import threading
 import queue
 import time
 
-# from validate.bqskit_processor import (
-#     BQSKitProcessor,
-#     BQSKitOptimizer
-# )
-
-"""Cmd line that applies the QITE algorithm to all the generated QASM programs.
-
-Arguments:
-    --input_folder: str - Folder containing the QASM programs.
-    --number_of_rounds: int - Number of rounds of the QITE algorithm.
-
-At each round the algorithm performs the following steps:
-1. Pick one PlatformProcessor at random.
-2. Pick a QASM program at random.
-3. Apply the PlatformProcessor to the QASM program.
-4. Repeat the above steps for all the QASM programs.
-
-The algorithm generates a new QASM program for each round and stores it in the output folder.
-
-# Style
-- use subfunctions appropriately
-- each function has at maximum 7 lines of code of content, break them to smaller functions otherwise
-- avoid function with a single line which is a function call
-- always use named arguments when calling a function
-    (except for standard library functions)
-- keep the style consistent to pep8 (max 80 char)
-- to print the logs it uses the console from Rich library
-- make sure to have docstring for each subfunction and keep it brief to the point
-(also avoid comments on top of the functions)
-- it uses pathlib every time that paths are checked, created or composed.
-- use type annotations with typing List, Dict, Any, Tuple, Optional as appropriate
-- make sure that any output folder exists before storing file in it, otherwise create it.
-
-Convert the function above into a click v8 interface in Python.
-- map all the arguments to a corresponding option (in click) which is required
-- add all the default values of the arguments as default of the click options
-- use only underscores
-- add a main with the command
-- add the required imports
-Make sure to add a function and call that function only in the main cli command.
-The goal is to be able to import that function also from other files.
-
-
-
-"""
-
 
 console = Console(color_system=None)
 

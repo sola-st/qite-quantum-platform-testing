@@ -12,61 +12,6 @@ import time
 import json
 
 """
-Here is a revised task description based on your additional requirements:
-
----
-
-### Task Description: Implement a Command Line Interface for QASM File Processing
-
-**Objective:**
-Develop a command line interface (CLI) script that scans a given input folder for Python files, executes the code to capture the value of specific variables, converts the QASM code to specified platforms (default: Qiskit, Pennylane, Pytket), and exports the converted code to new QASM files in the same folder with updated extensions.
-
-**Requirements:**
-
-1. **Input Handling:**
-    - The script should accept an `--input_folder` argument specifying the folder containing Python files.
-    - The script should focus only on the first-level Python files in the input folder and ignore subfolders.
-    - The Python files should be sorted alphabetically before processing.
-
-2. **Execution:**
-    - The script should execute the Python files using `exec` to capture the value of specific variables (e.g., `qc`).
-    - Ensure the execution environment is properly set up for running the Python code.
-
-3. **Conversion:**
-    - The script should convert the captured QASM code to specified platforms (default: Qiskit, Pennylane, Pytket).
-    - Use appropriate libraries or tools for the conversion process.
-    - Ensure the converted code adheres to the standards and formats required by the target platforms.
-
-4. **Output Handling:**
-    - The script should export the converted code to new QASM files in the same folder as the input files.
-    - The output QASM files should have the same name as the input files but with updated extensions to reflect the target platform.
-
-5. **Error Handling and Logging:**
-    - Implement error handling to manage issues during execution and conversion.
-    - Provide logging to capture the process details, including any errors or warnings.
-
-6. **Command Line Interface:**
-    - The script should support the following command line arguments:
-      - `--input_folder`: Path to the folder containing Python files.
-      - `--platforms`: List of target platforms for conversion (default: `qiskit`, `pennylane`, `pytket`).
-    - Provide default values for optional arguments.
-    - Display progress updates and feedback to the user during execution.
-
-
-# Style
-- use subfunctions appropriately
-- each function has at maximum 7 lines of code of content, break them to smaller functions otherwise
-- avoid function with a single line which is a function call
-- always use named arguments when calling a function
-     (except for standard library functions)
-- keep the style consistent to pep8 (max 80 char)
-- to print the logs it uses the console from Rich library
-- make sure to have docstring for each subfunction and keep it brief to the point
-(also avoid comments on top of the functions)
-- it uses pathlib every time that paths are checked, created or composed.
-- use type annotations with typing List, Dict, Any, Tuple, Optional as appropriate
-- make sure that any output folder exists before storing file in it, otherwise create it.
-
 # Example usage:
 # python -m qite.convert_to_qasm --input_folder /path/to/input/folder --platforms qiskit,pennylane,pytket
 """
