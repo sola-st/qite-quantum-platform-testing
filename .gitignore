@@ -3,6 +3,7 @@
 groq_token.txt
 openai_token.txt
 gemini_token.txt
+github_token.txt
 
 # data folders
 deprecated_apis/*
