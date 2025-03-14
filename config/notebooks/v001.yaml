@@ -1,5 +1,0 @@
-PATH_ROOT_DIR: ./
-DIR_PROGRAM_BANK: program_bank/v003/2024_10_17__17_05__qiskit
-INFO_TO_USE_FOR_CLUSTERING:
-  - exception_message
-  - essential_file_content

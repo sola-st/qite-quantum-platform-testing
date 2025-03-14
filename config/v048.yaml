@@ -1,7 +1,7 @@
 # v047: QITE with coverage every round
 
 batch_size: 1000
-budget_time_sec: 7200 #28800  # 8 hours
+budget_time_sec: 7200 # 2 hours (usually it takes ca 1 hour)
 
 
 commands:
