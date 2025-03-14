@@ -26,14 +26,40 @@ We share the data used in the paper:
 ## Requirements
 
 You need to have the following software installed on your machine to run QITE:
+- Conda
 - Docker
 - screen (optional but recommended to run QITE in the background while closing your terminal)
+Recommended to have Ubuntu e.g. 20.04 LTS or newer. Since we have tested the code on Ubuntu 20.04 LTS we cannot guarantee that it will work out of the box on other operating systems.
 
-## Installation and Running QITE in Docker (Recommended)
+## Reproduction: Results in the Paper (Level 1)
+
+1. Download the data and place them in the ['program_data/'](program_data/) directory. See the ['program_data/README.md'](program_data/README.md) file for more information on folder structure.
+
+2. Make sure to have all the dependencies listed in the ['environment.yml'](environment.yml) file installed. You can create a Conda environment with the following command:
+    ```shell
+    conda env create -f environment.yml
+    ```
+    Activate the environment with the following command:
+    ```shell
+    conda activate crosspl
+    ```
+3. Open the notebook [`notebooks/028_RQ_Results.ipynb`](notebooks/028_RQ_Results.ipynb). If in VSCode, you can open the notebook directly.
+    ```shell
+    jupyter notebook notebooks/028_RQ_Results.ipynb
+    ```
+This notebook contains the code to reproduce the figures in the paper.
+Run it top to bottom to reproduce the figures.
+
+
+
+## Reproduction: Re-run QITE (Level 2)
+
+### Installation and Running QITE in Docker (Recommended)
 
 To run QITE with coverage information collection you have to follow these steps:
 
 1. Prepare a configuration file in the [`config/`](config/) directory. You can use the [`config/demo_qite.yaml`](config/demo_qite.yaml) file as example.
+Read it carefully since it has an explanations of the fields, in case you want to change them.
 
 2. Run the following command to build the QITE Docker image and run the QITE tests:
     ```bash
@@ -44,7 +70,7 @@ To run QITE with coverage information collection you have to follow these steps:
 3. The results will be stored in the folder `program_bank/demo_qite/<<run_id>>`.
 Note that this can be configured in the configuration file changing the `output_dir` and `input_folder` fields of the various commands.
 
-## Installing and Running QITE Locally
+### Installing and Running QITE Locally
 
 You can also install QITE locally thanks to the `pyproject.toml` file.
 
@@ -59,6 +85,8 @@ You can also install QITE locally thanks to the `pyproject.toml` file.
     ```bash
     python entry.py --config config/demo_qite.yaml
     ```
+
+3. The results will be stored in the folder `program_bank/demo_qite/<<run_id>>`.
 
 
 
