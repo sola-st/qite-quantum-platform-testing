@@ -29,6 +29,7 @@ log.txt
 
 experiments/*
 notebooks/checkpoints/*
+notebooks/images/*.pdf
 
 **/.historical*
 .historical*
