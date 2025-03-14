@@ -1,0 +1,13 @@
+{
+    "exception_message": "The circuits are not equivalent: 0001811_fa43ab_qc_opt_level_3_qiskit.qasm, 0001811_fa43ab_qc_opt_level_0_qiskit.qasm",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/0001811_fa43ab.py\", line 586, in oracle_comparator\n    compare_call(pair[0], pair[1])\n  File \"/workspace/0001811_fa43ab.py\", line 214, in compare_qasm_via_qcec\n    raise ValueError(\nValueError: The circuits are not equivalent: 0001811_fa43ab_qc_opt_level_3_qiskit.qasm, 0001811_fa43ab_qc_opt_level_0_qiskit.qasm\n",
+    "current_file": "0001811_fa43ab.py",
+    "involved_functions": [
+        "compare_qasm_via_qcec"
+    ],
+    "timestamp": 1737648422.8035426,
+    "extra_info": {
+        "qasm_file_1": "0001811_fa43ab_qc_opt_level_3_qiskit.qasm",
+        "qasm_file_2": "0001811_fa43ab_qc_opt_level_0_qiskit.qasm"
+    }
+}

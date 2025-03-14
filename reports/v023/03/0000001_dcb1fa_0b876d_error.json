@@ -1,0 +1,13 @@
+{
+    "exception_message": "The circuits are not equivalent: 0000001_dcb1fa_qc_FullPeepholeOptimise_pytket.qasm, 0000001_dcb1fa_qc_qiskit.qasm",
+    "stack_trace": "Traceback (most recent call last):\n  File \"/workspace/0000001_dcb1fa.py\", line 632, in oracle_comparator\n    compare_call(pair[0], pair[1])\n  File \"/workspace/0000001_dcb1fa.py\", line 260, in compare_qasm_via_qcec\n    raise ValueError(\nValueError: The circuits are not equivalent: 0000001_dcb1fa_qc_FullPeepholeOptimise_pytket.qasm, 0000001_dcb1fa_qc_qiskit.qasm\n",
+    "current_file": "0000001_dcb1fa.py",
+    "involved_functions": [
+        "compare_qasm_via_qcec"
+    ],
+    "timestamp": 1738243240.0873728,
+    "extra_info": {
+        "qasm_file_1": "0000001_dcb1fa_qc_FullPeepholeOptimise_pytket.qasm",
+        "qasm_file_2": "0000001_dcb1fa_qc_qiskit.qasm"
+    }
+}
