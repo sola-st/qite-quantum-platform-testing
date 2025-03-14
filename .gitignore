@@ -9,7 +9,8 @@ github_token.txt
 deprecated_apis/*
 available_apis/*
 platform_repos/*
-program_bank/*
+program_bank/*/*
+program_bank/*.tar.gz
 data/*
 
 # logs

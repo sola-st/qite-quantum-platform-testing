@@ -19,21 +19,22 @@ There are two reproduction levels for the results in the paper:
 ## Data Availability
 
 We share the data used in the paper:
-- [QITE Data](https://figshare.com): containing the experimental data obtaining running QITE, and used to produce the plots and figures in the paper.
-- [MorphQ Data](https://figshare.com): containing the experimental data obtaining running MorphQ, and used to compare the performance of QITE with MorphQ.
+- [QITE Data](https://figshare.com/s/465203f35daa8ac127e7): containing the experimental data obtaining running QITE, and used to produce the plots and figures in the paper.
+- [MorphQ Data](https://figshare.com/s/465203f35daa8ac127e7): containing the experimental data obtaining running MorphQ, and used to compare the performance of QITE with MorphQ.
 
 
 ## Requirements
 
 You need to have the following software installed on your machine to run QITE:
-- Conda
-- Docker
-- screen (optional but recommended to run QITE in the background while closing your terminal)
-Recommended to have Ubuntu e.g. 20.04 LTS or newer. Since we have tested the code on Ubuntu 20.04 LTS we cannot guarantee that it will work out of the box on other operating systems.
+- **[Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)**
+- **[Docker](https://docs.docker.com/engine/install/)**
+- **[screen](https://linuxize.com/post/how-to-use-linux-screen/)** (optional but recommended to run QITE in the background while closing your terminal)
+
+**OS**: we recommend to have Ubuntu e.g. Ubuntu 22.04.5 LTS or newer, since we have tested the code on Ubuntu Ubuntu 22.04.5 LTS we cannot guarantee that it will work out of the box on other operating systems.
 
 ## Reproduction: Results in the Paper (Level 1)
 
-1. Download the data and place them in the ['program_data/'](program_data/) directory. See the ['program_data/README.md'](program_data/README.md) file for more information on folder structure.
+1. Download the data and place them in the ['program_bank/'](program_bank/) directory. See the ['program_bank/README.md'](program_bank/README.md) file for more information on folder structure.
 
 2. Make sure to have all the dependencies listed in the ['environment.yml'](environment.yml) file installed. You can create a Conda environment with the following command:
     ```shell
@@ -63,6 +64,10 @@ Read it carefully since it has an explanations of the fields, in case you want t
 
 2. Run the following command to build the QITE Docker image and run the QITE tests:
     ```bash
+    # Clone the repository
+    git clone <this-repo-url>
+    cd <this-repo-name>
+    # From the root of the repository
     bash docker/coverage_toolkit/run_qite_in_docker.sh -c config/demo_qite.yaml --interactive
     ```
     Run it in `screen` to keep the process running in the background even if you close your terminal. Add `screen` before the command above.
@@ -83,6 +88,7 @@ You can also install QITE locally thanks to the `pyproject.toml` file.
     ```
 2. Run QITE with the following command:
     ```bash
+    # From the root of the repository
     python entry.py --config config/demo_qite.yaml
     ```
 
